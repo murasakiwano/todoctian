@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 )
 
@@ -16,7 +14,7 @@ type Task struct {
 	Project    Project // The project this task belongs to
 	subtasks   []*Task
 	Status     taskStatus // Task status (whether it's completed or not)
-	TaskUUID   uuid.UUID  // A unique identifier for the task
+	ID         uuid.UUID  // A unique identifier for the task
 }
 
 type taskStatus int
@@ -34,12 +32,12 @@ const (
 // task to the project it belongs to!
 func CreateTask(name string, project Project) Task {
 	task := Task{
+		ID:         uuid.New(),
 		Name:       name,
 		Project:    project,
 		Status:     Todo,
 		parentTask: nil,
 		subtasks:   []*Task{},
-		TaskUUID:   uuid.New(),
 	}
 
 	return task
@@ -66,11 +64,8 @@ func (t *Task) CompleteTask() {
 		return
 	}
 
-	fmt.Println(t.parentTask)
 	if t.parentTask.Status != Completed && t.parentTask.subtasksAreComplete() {
-		fmt.Println("Completing parent task...", t.parentTask)
 		t.parentTask.CompleteTask()
-		fmt.Println("Completed parent task:", t.parentTask)
 	}
 }
 
@@ -108,9 +103,9 @@ func (t *Task) AddSubtask(newTask *Task) {
 // The method returns `true` and a Task if the subtask existed, otherwise it
 // returns `false` and `nil`. Keep in mind that this only searches for direct
 // subtasks, no further than 1 level deep.
-func (t *Task) RemoveSubtask(taskUUID uuid.UUID) (bool, *Task) {
+func (t *Task) RemoveSubtask(id uuid.UUID) (bool, *Task) {
 	for i, st := range t.subtasks {
-		if st.TaskUUID == taskUUID {
+		if st.ID == id {
 			// TODO: does it work for the last element??
 			t.subtasks = removeTask(t.subtasks, i)
 

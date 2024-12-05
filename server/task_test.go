@@ -3,23 +3,23 @@ package main
 import "testing"
 
 func TestTaskCreation(t *testing.T) {
-	project := CreateProject("Test Project")
+	project := NewProject("Test Project")
 	CreateTask("Test task", project)
 }
 
 func TestAddSubtask(t *testing.T) {
-	project := CreateProject("Test Project")
+	project := NewProject("Test Project")
 	task := CreateTask("Test task", project)
 	subtask := CreateTask("Test subtask", project)
 	task.AddSubtask(&subtask)
 
-	if task.subtasks[0].TaskUUID != subtask.TaskUUID {
-		t.Errorf("Tasks UUID do not match. Expected %s, got %s.", task.subtasks[0].TaskUUID, subtask.TaskUUID)
+	if task.subtasks[0].ID != subtask.ID {
+		t.Errorf("Tasks UUIDs do not match. Expected %s, got %s.", task.subtasks[0].ID, subtask.ID)
 	}
 }
 
 func TestTaskCompletion(t *testing.T) {
-	project := CreateProject("Test Project")
+	project := NewProject("Test Project")
 	task := CreateTask("Test task", project)
 	task.CompleteTask()
 
@@ -29,7 +29,7 @@ func TestTaskCompletion(t *testing.T) {
 }
 
 func TestTaskCompletionWithSubtasks(t *testing.T) {
-	project := CreateProject("Test Project")
+	project := NewProject("Test Project")
 	parentTask := CreateTask("Test task", project)
 	firstSubtask := CreateTask("First subtask", project)
 	secondSubtask := CreateTask("Second subtask", project)
@@ -48,7 +48,7 @@ func TestTaskCompletionWithSubtasks(t *testing.T) {
 }
 
 func TestParentTaskCompletion(t *testing.T) {
-	project := CreateProject("Test Project")
+	project := NewProject("Test Project")
 	parentTask := CreateTask("Parent task", project)
 	subtask := CreateTask("Subtask", project)
 

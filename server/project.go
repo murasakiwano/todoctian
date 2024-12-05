@@ -7,14 +7,15 @@ import (
 // A Project is a collection of tasks. The only attribute releant to the user is
 // its name.
 type Project struct {
-	UUID  uuid.UUID // unique identifier for the project
-	Name  string    // the project name
-	Tasks []Task    // tasks associated with the project
+	Name  string
+	Tasks []Task
+	ID    uuid.UUID
 }
 
 // Create a new instance of a project.
-func CreateProject(name string) Project {
+func NewProject(name string) Project {
 	return Project{
+		ID:    uuid.New(),
 		Name:  name,
 		Tasks: []Task{},
 	}
