@@ -15,4 +15,5 @@ type TaskRepository interface {
 	GetSubtasks(id uuid.UUID) ([]Task, error)
 	GetTasksByProject(projectID uuid.UUID) []Task
 	GetTasksInProjectRoot(projectID uuid.UUID) []Task
+	SearchFuzzy(partialTaskName string) ([]Task, error)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/murasakiwano/todoctian/server/internal"
 )
 
@@ -171,4 +172,15 @@ func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []T
 	}
 
 	return root
+}
+
+func (tr *TaskRepositoryInMemory) SearchFuzzy(partialTaskName string) ([]Task, error) {
+	tasks := []Task{}
+	for _, t := range tr.tasks {
+		if fuzzy.MatchFold(partialTaskName, t.Name) {
+			tasks = append(tasks, t)
+		}
+	}
+
+	return tasks, nil
 }
