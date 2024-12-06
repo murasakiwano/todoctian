@@ -46,7 +46,6 @@ func (p *ProjectService) RenameProject(id uuid.UUID, newName string) error {
 		return err
 	}
 	if project.Name == newName {
-		fmt.Printf("Project already has name \"%s\", nothing to do.\n", newName)
 		return nil
 	}
 

@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -11,6 +12,10 @@ import (
 //
 // A task may or may not have a parent task and, in turn, a list of subtasks.
 type Task struct {
+	// Time of task creation
+	CreatedAt time.Time
+	// Las time the task was updated
+	UpdatedAt time.Time
 	// The ID of the parent task
 	ParentTaskID *uuid.UUID
 	// The name of the task
@@ -40,6 +45,30 @@ func (t Task) String() string {
 	)
 }
 
+// NewTask returns a new instance of a task. It does not explicitly add the
+// task to the project it belongs to! Also, the order is unset at first. It should be explicitly
+// set by a service.
+func NewTask(name string, projectID uuid.UUID, parentTaskID *uuid.UUID) Task {
+	now := time.Now()
+	task := Task{
+		ID:           uuid.New(),
+		Name:         name,
+		ProjectID:    projectID,
+		Status:       Todo,
+		ParentTaskID: parentTaskID,
+		SubtaskIDs:   []uuid.UUID{},
+		Order:        0, // 0 means the order is unset
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	return task
+}
+
+func (t Task) IsInProjectRoot() bool {
+	return t.ParentTaskID == nil
+}
+
 type TaskStatus int
 
 func (t TaskStatus) String() string {
@@ -50,24 +79,3 @@ const (
 	Todo TaskStatus = iota
 	Completed
 )
-
-// NewTask returns a new instance of a task. It does not explicitly add the
-// task to the project it belongs to! Also, the order is unset at first. It should be explicitly
-// set by a service.
-func NewTask(name string, projectID uuid.UUID, parentTaskID *uuid.UUID) Task {
-	task := Task{
-		ID:           uuid.New(),
-		Name:         name,
-		ProjectID:    projectID,
-		Status:       Todo,
-		ParentTaskID: parentTaskID,
-		SubtaskIDs:   []uuid.UUID{},
-		Order:        0, // 0 means the order is unset
-	}
-
-	return task
-}
-
-func (t Task) IsInProjectRoot() bool {
-	return t.ParentTaskID == nil
-}

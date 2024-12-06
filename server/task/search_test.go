@@ -28,7 +28,7 @@ func TestSearchTask_AcrossAllProjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tasks, err := taskService.SearchTask("test", nil)
+	tasks, err := taskService.SearchTaskName("test", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lithammer/fuzzysearch/fuzzy"
@@ -59,6 +60,7 @@ func (tr *TaskRepositoryInMemory) Update(task Task) error {
 		return internal.NewNotFoundError(fmt.Sprintf("Task with ID %s", task.ID))
 	}
 
+	task.UpdatedAt = time.Now()
 	tr.tasks[task.ID] = task
 
 	return nil
@@ -104,7 +106,10 @@ func (tr *TaskRepositoryInMemory) UpdateTaskStatus(id uuid.UUID, newStatus TaskS
 	}
 
 	task.Status = newStatus
-	tr.tasks[id] = task
+	err := tr.Update(task)
+	if err != nil {
+		return fmt.Errorf("Failed to update task status: %w", err)
+	}
 
 	return nil
 }
@@ -159,6 +164,19 @@ func (tr *TaskRepositoryInMemory) GetTasksByProject(projectID uuid.UUID) []Task 
 	}
 
 	return projectTasks
+}
+
+func (tr *TaskRepositoryInMemory) GetTasksByStatus(projectID uuid.UUID, status TaskStatus) []Task {
+	projectTasks := tr.GetTasksByProject(projectID)
+
+	tasks := []Task{}
+	for _, t := range projectTasks {
+		if t.Status == status {
+			tasks = append(tasks, t)
+		}
+	}
+
+	return tasks
 }
 
 func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []Task {

@@ -14,6 +14,7 @@ type TaskRepository interface {
 	UpdateTaskStatus(id uuid.UUID, newStatus TaskStatus) error
 	GetSubtasks(id uuid.UUID) ([]Task, error)
 	GetTasksByProject(projectID uuid.UUID) []Task
+	GetTasksByStatus(projectID uuid.UUID, status TaskStatus) []Task
 	GetTasksInProjectRoot(projectID uuid.UUID) []Task
 	SearchFuzzy(partialTaskName string) ([]Task, error)
 }
