@@ -18,17 +18,17 @@ func TestSearchTask_AcrossAllProjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secondProject, err := projectService.CreateProject("Second project")
+	secondTask, err := taskService.CreateTask("Test task for second project", project.ID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	secondTask, err := taskService.CreateTask("Test task for second project", secondProject.ID, nil)
+	_, err = taskService.CreateTask("unmatching", project.ID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tasks, err := taskService.SearchTaskName("test", nil)
+	tasks, err := taskService.SearchTaskName("tsk", project.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestSearchTask_AcrossAllProjects(t *testing.T) {
 		return t.Name == firstTask.Name
 	}) && slices.ContainsFunc(tasks, func(t Task) bool {
 		return t.Name == secondTask.Name
-	})) {
+	}) && len(tasks) == 2) {
 		t.Fatalf("expected slice to contain both tasks that were added: %v", tasks)
 	}
 }

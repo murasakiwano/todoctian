@@ -20,7 +20,7 @@ func (t *TaskService) CreateTask(taskName string, projectID uuid.UUID, parentTas
 		return Task{}, err
 	}
 
-	return task, t.taskDB.Save(task)
+	return task, t.taskDB.Create(task)
 }
 
 // Sets the initial order of the task relative to its siblings. The order is an integer starting at 0

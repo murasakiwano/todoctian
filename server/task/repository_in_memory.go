@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/murasakiwano/todoctian/server/internal"
 )
 
@@ -19,8 +18,8 @@ func NewTaskRepositoryInMemory() *TaskRepositoryInMemory {
 	return &TaskRepositoryInMemory{tasks: make(map[uuid.UUID]Task)}
 }
 
-// Save persists a task to the tasks map.
-func (tr *TaskRepositoryInMemory) Save(task Task) error {
+// Create persists a task to the tasks map.
+func (tr *TaskRepositoryInMemory) Create(task Task) error {
 	valid, err := tr.TaskIsValidParent(task.ParentTaskID)
 	if err != nil || !valid {
 		return errors.New("Task has an invalid parent task")
@@ -39,6 +38,18 @@ func (tr *TaskRepositoryInMemory) Save(task Task) error {
 	}
 
 	return nil
+}
+
+// Rename a given task
+func (tr *TaskRepositoryInMemory) Rename(taskID uuid.UUID, newName string) error {
+	task, err := tr.Get(taskID)
+	if err != nil {
+		return fmt.Errorf("Could not rename task %s: %w", taskID, err)
+	}
+
+	task.Name = newName
+
+	return tr.Update(task)
 }
 
 // Update reads a task from the map, then updates its information. For simplicity, it overwrites
@@ -208,16 +219,4 @@ func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []T
 	}
 
 	return root
-}
-
-// Fuzzy search a task by its name.
-func (tr *TaskRepositoryInMemory) SearchFuzzy(partialTaskName string) ([]Task, error) {
-	tasks := []Task{}
-	for _, t := range tr.tasks {
-		if fuzzy.MatchFold(partialTaskName, t.Name) {
-			tasks = append(tasks, t)
-		}
-	}
-
-	return tasks, nil
 }

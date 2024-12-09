@@ -2,27 +2,54 @@ package task
 
 import (
 	"fmt"
+	"log/slog"
+	"slices"
 
 	"github.com/google/uuid"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
-func (ts *TaskService) SearchTaskName(partial string, projectID *uuid.UUID) ([]Task, error) {
-	tasks, err := ts.taskDB.SearchFuzzy(partial)
-	if err != nil {
-		return nil, fmt.Errorf("failed to perform search with string %s: %w", partial, err)
+func (ts *TaskService) SearchTaskName(partial string, projectID uuid.UUID) ([]Task, error) {
+	tasks := ts.taskDB.GetTasksByProject(projectID)
+	if len(tasks) == 0 {
+		return nil, fmt.Errorf(
+			"failed to perform search with string %s: there are no tasks for project %s",
+			partial,
+			projectID,
+		)
 	}
 
-	if projectID != nil {
-		relatedTasks := []Task{}
-		for _, t := range tasks {
-			if t.ProjectID == *projectID {
-				relatedTasks = append(relatedTasks, t)
-			}
+	type taskAndDistance struct {
+		task     Task
+		distance int
+	}
+	matchingTasks := []taskAndDistance{}
+	for _, t := range tasks {
+		distance := fuzzy.RankMatchFold(partial, t.Name)
+		ts.logger.Debug("fuzzy.RankMatchFold result", slog.Int("result", distance), slog.String("taskName", t.Name))
+
+		if distance > -1 {
+			matchingTasks = append(matchingTasks, taskAndDistance{task: t, distance: distance})
 		}
-		tasks = relatedTasks
 	}
 
-	return tasks, nil
+	slices.SortFunc(matchingTasks, func(a, b taskAndDistance) int {
+		if a.distance > b.distance {
+			return -1
+		}
+		if a.distance < b.distance {
+			return 1
+		}
+
+		return 0
+	})
+
+	sortedTasks := []Task{}
+	for _, t := range matchingTasks {
+		sortedTasks = append(sortedTasks, t.task)
+	}
+
+	return sortedTasks, nil
 }
 
 // Returns the tasks with given status in a specific project.

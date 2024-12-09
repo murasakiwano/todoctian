@@ -14,8 +14,7 @@ func (ts *TaskService) RenameTask(id uuid.UUID, newTaskName string) error {
 		return fmt.Errorf("Could not rename task %s: %w", id, err)
 	}
 
-	task.Name = newTaskName
-	err = ts.taskDB.Save(task)
+	err = ts.taskDB.Rename(task.ID, newTaskName)
 	if err != nil {
 		return err
 	}

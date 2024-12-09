@@ -5,8 +5,8 @@ import (
 )
 
 type TaskRepository interface {
-	// Save a task to the database
-	Save(task Task) error
+	// Create a task in the database
+	Create(task Task) error
 
 	// Retrieve a task by its ID
 	Get(id uuid.UUID) (Task, error)
@@ -26,8 +26,8 @@ type TaskRepository interface {
 	// Filter tasks in a project by their status
 	GetTasksByStatus(projectID uuid.UUID, status TaskStatus) []Task
 
-	// Fuzzy search for task names
-	SearchFuzzy(partialTaskName string) ([]Task, error)
+	// Rename a single task
+	Rename(taskID uuid.UUID, newName string) error
 
 	// Update a single task
 	Update(task Task) error
