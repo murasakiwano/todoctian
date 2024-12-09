@@ -16,11 +16,11 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 		return err
 	}
 
-	if task.Status == Todo {
+	if task.Status == TaskStatusPending {
 		return nil
 	}
 
-	task.Status = Todo
+	task.Status = TaskStatusPending
 	err = ts.taskDB.Update(task)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 		return err
 	}
 
-	if parentTask.Status == Todo {
+	if parentTask.Status == TaskStatusPending {
 		return nil
 	}
 
@@ -72,7 +72,7 @@ func (ts *TaskService) CompleteTask(id uuid.UUID) error {
 }
 
 func (ts *TaskService) markTaskAsCompleted(task Task) error {
-	task.Status = Completed
+	task.Status = TaskStatusCompleted
 	ts.logger.Debug("marked task as completed", slog.String("taskID", task.ID.String()))
 	err := ts.taskDB.Update(task)
 	if err != nil {
@@ -84,13 +84,13 @@ func (ts *TaskService) markTaskAsCompleted(task Task) error {
 }
 
 func (ts *TaskService) completeSubtasks(task Task) error {
-	if len(task.SubtaskIDs) == 0 {
+	if len(task.Subtasks) == 0 {
 		return nil
 	}
 
 	ts.logger.Debug("task has subtasks, completing them...", slog.String("taskID", task.ID.String()))
-	for _, subtaskID := range task.SubtaskIDs {
-		err := ts.CompleteTask(subtaskID)
+	for _, subtask := range task.Subtasks {
+		err := ts.CompleteTask(subtask.ID)
 		if err != nil {
 			ts.logger.Error(
 				"Failed to complete task",
@@ -130,7 +130,7 @@ func (ts *TaskService) completeParentTask(task Task) error {
 	}
 
 	ts.logger.Debug("found task siblings", slog.Any("siblings", siblings))
-	if ts.allSiblingsCompleted(siblings) && parentTask.Status != Completed {
+	if ts.allSiblingsCompleted(siblings) && parentTask.Status != TaskStatusCompleted {
 		err := ts.CompleteTask(parentTask.ID)
 		if err != nil {
 			return err
@@ -142,7 +142,7 @@ func (ts *TaskService) completeParentTask(task Task) error {
 
 func (ts *TaskService) allSiblingsCompleted(tasks []Task) bool {
 	for _, s := range tasks {
-		if s.Status != Completed {
+		if s.Status != TaskStatusCompleted {
 			ts.logger.Debug(
 				"sibling is not marked completed, will not complete parent task",
 				slog.String("siblingID", s.ID.String()),

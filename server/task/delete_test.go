@@ -37,15 +37,11 @@ func TestDeleteTask_TaskDoesNotExist(t *testing.T) {
 
 	id := uuid.New()
 	_, err := taskService.DeleteTask(id)
-	if err == nil {
+	if err != nil {
 		t.Fatalf(
-			"task %s was deleted successfully when it should not even exist in the first place",
-			id,
+			"deleting a nonexistent task should be a no-op, but it returned an error: %v",
+			err,
 		)
-	}
-
-	if !errors.Is(err, internal.ErrNotFound) {
-		t.Fatal(err)
 	}
 }
 

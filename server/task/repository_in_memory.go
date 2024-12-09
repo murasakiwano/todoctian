@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ func NewTaskRepositoryInMemory() *TaskRepositoryInMemory {
 	return &TaskRepositoryInMemory{tasks: make(map[uuid.UUID]Task)}
 }
 
+// Save persists a task to the tasks map.
 func (tr *TaskRepositoryInMemory) Save(task Task) error {
 	valid, err := tr.TaskIsValidParent(task.ParentTaskID)
 	if err != nil || !valid {
@@ -32,27 +34,14 @@ func (tr *TaskRepositoryInMemory) Save(task Task) error {
 			return errors.New("Parent task does not exist")
 		}
 
-		parentTask.SubtaskIDs = append(parentTask.SubtaskIDs, task.ID)
+		parentTask.Subtasks = append(parentTask.Subtasks, task)
 		tr.tasks[parentTask.ID] = parentTask
 	}
 
 	return nil
 }
 
-func (tr *TaskRepositoryInMemory) BatchSave(tasks []Task) (int, error) {
-	n := len(tasks)
-
-	for _, t := range tasks {
-		err := tr.Save(t)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	return n, nil
-}
-
-// Update reads a task from the database, then updates the information. For simplicity, it overwrites
+// Update reads a task from the map, then updates its information. For simplicity, it overwrites
 // all the task info.
 func (tr *TaskRepositoryInMemory) Update(task Task) error {
 	_, exists := tr.tasks[task.ID]
@@ -66,6 +55,7 @@ func (tr *TaskRepositoryInMemory) Update(task Task) error {
 	return nil
 }
 
+// BatchUpdate updates a collection of tasks in batch.
 func (tr *TaskRepositoryInMemory) BatchUpdate(tasks []Task) (int, error) {
 	n := len(tasks)
 
@@ -79,6 +69,7 @@ func (tr *TaskRepositoryInMemory) BatchUpdate(tasks []Task) (int, error) {
 	return n, nil
 }
 
+// Read a specific task by its ID in the map.
 func (tr *TaskRepositoryInMemory) Get(id uuid.UUID) (Task, error) {
 	task, exists := tr.tasks[id]
 	if !exists {
@@ -88,6 +79,7 @@ func (tr *TaskRepositoryInMemory) Get(id uuid.UUID) (Task, error) {
 	return task, nil
 }
 
+// Delete a task with the specified ID.
 func (tr *TaskRepositoryInMemory) Delete(id uuid.UUID) (Task, error) {
 	task, exists := tr.tasks[id]
 	if !exists {
@@ -99,6 +91,7 @@ func (tr *TaskRepositoryInMemory) Delete(id uuid.UUID) (Task, error) {
 	return task, nil
 }
 
+// Update a task status to Pending or Completed.
 func (tr *TaskRepositoryInMemory) UpdateTaskStatus(id uuid.UUID, newStatus TaskStatus) error {
 	task, exists := tr.tasks[id]
 	if !exists {
@@ -114,6 +107,7 @@ func (tr *TaskRepositoryInMemory) UpdateTaskStatus(id uuid.UUID, newStatus TaskS
 	return nil
 }
 
+// Check if the ID belongs to a valid task.
 func (tr TaskRepositoryInMemory) TaskIsValidParent(parentTaskID *uuid.UUID) (bool, error) {
 	// If there is no parent task (i.e., task.ParentTask == nil), then it is valid
 	if parentTaskID == nil {
@@ -136,15 +130,16 @@ func (tr TaskRepositoryInMemory) TaskIsValidParent(parentTaskID *uuid.UUID) (boo
 	return true, nil
 }
 
-func (tr *TaskRepositoryInMemory) GetSubtasks(taskID uuid.UUID) ([]Task, error) {
+// Get all direct children of a task.
+func (tr *TaskRepositoryInMemory) GetSubtasksDirect(taskID uuid.UUID) ([]Task, error) {
 	subtasks := []Task{}
 	task, err := tr.Get(taskID)
 	if err != nil {
 		return subtasks, err
 	}
 
-	for _, subtaskID := range task.SubtaskIDs {
-		subtask, err := tr.Get(subtaskID)
+	for _, subtask := range task.Subtasks {
+		subtask, err := tr.Get(subtask.ID)
 		if err != nil {
 			return subtasks, err
 		}
@@ -154,6 +149,27 @@ func (tr *TaskRepositoryInMemory) GetSubtasks(taskID uuid.UUID) ([]Task, error) 
 	return subtasks, nil
 }
 
+// Recursively retrieve all subtasks of a specific task
+func (r *TaskRepositoryInMemory) GetSubtasksDeep(taskID uuid.UUID) ([]Task, error) {
+	subtasks := []Task{}
+	task, err := r.Get(taskID)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get subtasks of task %s: %w", taskID, err)
+	}
+
+	for _, subtask := range task.Subtasks {
+		ssubtasks, err := r.GetSubtasksDeep(subtask.ID)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get subtasks of task %s: %w", subtask.ID, err)
+		}
+
+		subtasks = slices.Concat(subtasks, ssubtasks)
+	}
+
+	return subtasks, nil
+}
+
+// Filter tasks by project.
 func (tr *TaskRepositoryInMemory) GetTasksByProject(projectID uuid.UUID) []Task {
 	projectTasks := []Task{}
 
@@ -166,6 +182,7 @@ func (tr *TaskRepositoryInMemory) GetTasksByProject(projectID uuid.UUID) []Task 
 	return projectTasks
 }
 
+// Filter tasks in a project by status.
 func (tr *TaskRepositoryInMemory) GetTasksByStatus(projectID uuid.UUID, status TaskStatus) []Task {
 	projectTasks := tr.GetTasksByProject(projectID)
 
@@ -179,6 +196,7 @@ func (tr *TaskRepositoryInMemory) GetTasksByStatus(projectID uuid.UUID, status T
 	return tasks
 }
 
+// Get all tasks that are in the project root, i.e., that have no parent task.
 func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []Task {
 	projectTasks := tr.GetTasksByProject(projectID)
 
@@ -192,6 +210,7 @@ func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []T
 	return root
 }
 
+// Fuzzy search a task by its name.
 func (tr *TaskRepositoryInMemory) SearchFuzzy(partialTaskName string) ([]Task, error) {
 	tasks := []Task{}
 	for _, t := range tr.tasks {

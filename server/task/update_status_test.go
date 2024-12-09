@@ -27,7 +27,7 @@ func TestUpdateTaskStatus_CompleteWithoutSubtasks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 }
@@ -70,7 +70,7 @@ func TestUpdateTaskStatus_CompleteWithSubtasks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if subtask.Status != Completed {
+	if subtask.Status != TaskStatusCompleted {
 		t.Fatal("subtask was not marked completed successfully")
 	}
 
@@ -79,7 +79,7 @@ func TestUpdateTaskStatus_CompleteWithSubtasks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if nestedSubtask.Status != Completed {
+	if nestedSubtask.Status != TaskStatusCompleted {
 		t.Fatal("nestedSubtask was not marked completed successfully")
 	}
 
@@ -88,7 +88,7 @@ func TestUpdateTaskStatus_CompleteWithSubtasks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if nestedSiblingSubstask.Status != Completed {
+	if nestedSiblingSubstask.Status != TaskStatusCompleted {
 		t.Fatal("nestedSiblingSubtask was not marked completed successfully")
 	}
 
@@ -97,7 +97,7 @@ func TestUpdateTaskStatus_CompleteWithSubtasks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 }
@@ -145,7 +145,7 @@ func TestUpdateTaskStatus_CompleteAlsoCompletesTheParentTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if nestedSubtask.Status != Completed {
+	if nestedSubtask.Status != TaskStatusCompleted {
 		t.Fatal("nestedSubtask was not marked completed successfully")
 	}
 
@@ -154,7 +154,7 @@ func TestUpdateTaskStatus_CompleteAlsoCompletesTheParentTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if nestedSiblingSubstask.Status != Completed {
+	if nestedSiblingSubstask.Status != TaskStatusCompleted {
 		t.Fatal("nestedSiblingSubtask was not marked completed successfully")
 	}
 
@@ -163,7 +163,7 @@ func TestUpdateTaskStatus_CompleteAlsoCompletesTheParentTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if subtask.Status != Completed {
+	if subtask.Status != TaskStatusCompleted {
 		t.Fatal("subtask was not marked completed successfully")
 	}
 
@@ -172,7 +172,7 @@ func TestUpdateTaskStatus_CompleteAlsoCompletesTheParentTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 }
@@ -196,7 +196,7 @@ func TestUpdateTaskStatus_CompleteTaskIsAlreadyCompleted(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 
@@ -206,7 +206,7 @@ func TestUpdateTaskStatus_CompleteTaskIsAlreadyCompleted(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 }
@@ -230,7 +230,7 @@ func TestUpdateTaskStatus_Pending(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 
@@ -240,7 +240,7 @@ func TestUpdateTaskStatus_Pending(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Todo {
+	if task.Status != TaskStatusPending {
 		t.Fatal("task was not marked as pending successfully")
 	}
 }
@@ -269,7 +269,7 @@ func TestUpdateTaskStatus_PendingDoesNotMarkSubtasksAsPending(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 
@@ -278,7 +278,7 @@ func TestUpdateTaskStatus_PendingDoesNotMarkSubtasksAsPending(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if subtask.Status != Completed {
+	if subtask.Status != TaskStatusCompleted {
 		t.Fatal("subtask was not completed successfully")
 	}
 
@@ -288,7 +288,7 @@ func TestUpdateTaskStatus_PendingDoesNotMarkSubtasksAsPending(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Todo {
+	if task.Status != TaskStatusPending {
 		t.Fatal("task was not marked as pending successfully")
 	}
 
@@ -297,7 +297,7 @@ func TestUpdateTaskStatus_PendingDoesNotMarkSubtasksAsPending(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if subtask.Status != Completed {
+	if subtask.Status != TaskStatusCompleted {
 		t.Fatal("subtask was accidentally marked as pending")
 	}
 }
@@ -331,7 +331,7 @@ func TestUpdateTaskStatus_PendingMarksParentAsPending(t *testing.T) {
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Completed {
+	if task.Status != TaskStatusCompleted {
 		t.Fatal("task was not completed successfully")
 	}
 
@@ -340,7 +340,7 @@ func TestUpdateTaskStatus_PendingMarksParentAsPending(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if subtask.Status != Completed {
+	if subtask.Status != TaskStatusCompleted {
 		t.Fatal("subtask was not completed successfully")
 	}
 
@@ -349,7 +349,7 @@ func TestUpdateTaskStatus_PendingMarksParentAsPending(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if nestedSubtask.Status != Completed {
+	if nestedSubtask.Status != TaskStatusCompleted {
 		t.Fatal("nestedSubtask was not completed successfully")
 	}
 
@@ -363,7 +363,7 @@ func TestUpdateTaskStatus_PendingMarksParentAsPending(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if nestedSubtask.Status != Todo {
+	if nestedSubtask.Status != TaskStatusPending {
 		t.Fatal("nestedSubtask was not marked as pending successfully")
 	}
 
@@ -372,12 +372,12 @@ func TestUpdateTaskStatus_PendingMarksParentAsPending(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if subtask.Status != Todo {
+	if subtask.Status != TaskStatusPending {
 		t.Fatal("subtask was not marked as pending successfully")
 	}
 
 	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != Todo {
+	if task.Status != TaskStatusPending {
 		t.Fatal("task was not marked as pending successfully")
 	}
 }

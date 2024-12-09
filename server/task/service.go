@@ -61,7 +61,7 @@ func (ts TaskService) FetchTaskSiblings(task Task) ([]Task, error) {
 	if task.IsInProjectRoot() {
 		siblings = ts.taskDB.GetTasksInProjectRoot(task.ProjectID)
 	} else {
-		s, err := ts.taskDB.GetSubtasks(*task.ParentTaskID)
+		s, err := ts.taskDB.GetSubtasksDirect(*task.ParentTaskID)
 		if err != nil {
 			return siblings, err
 		}

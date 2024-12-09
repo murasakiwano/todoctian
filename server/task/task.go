@@ -2,13 +2,14 @@ package task
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// Represents a to-do item. A task is either complete or incomplete, so we
-// represent this with "To-do" and "Completed".
+// Task struct    Represents a to-do item. A task is either complete or incomplete, so we
+// represent this with "Pending" and "Completed".
 //
 // A task may or may not have a parent task and, in turn, a list of subtasks.
 type Task struct {
@@ -20,8 +21,8 @@ type Task struct {
 	ParentTaskID *uuid.UUID
 	// The name of the task
 	Name string
-	// The IDs of each of the subtasks
-	SubtaskIDs []uuid.UUID
+	// The subtasks of the task
+	Subtasks []Task
 	// Task status (whether it's completed or not)
 	Status TaskStatus
 	// The ID of the Project this task belongs to
@@ -37,7 +38,7 @@ func (t Task) String() string {
 		"{ID: %s Name: %s SubtaskIDs: %v Status: %s ProjectID: %s ParentTaskID: %s Order: %d}",
 		t.ID,
 		t.Name,
-		t.SubtaskIDs,
+		t.Subtasks,
 		t.Status,
 		t.ProjectID,
 		t.ParentTaskID,
@@ -54,9 +55,9 @@ func NewTask(name string, projectID uuid.UUID, parentTaskID *uuid.UUID) Task {
 		ID:           uuid.New(),
 		Name:         name,
 		ProjectID:    projectID,
-		Status:       Todo,
+		Status:       TaskStatusPending,
 		ParentTaskID: parentTaskID,
-		SubtaskIDs:   []uuid.UUID{},
+		Subtasks:     []Task{},
 		Order:        0, // 0 means the order is unset
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -72,10 +73,24 @@ func (t Task) IsInProjectRoot() bool {
 type TaskStatus int
 
 func (t TaskStatus) String() string {
-	return [...]string{"To-do", "Completed"}[t]
+	return [...]string{"Pending", "Completed"}[t]
 }
 
 const (
-	Todo TaskStatus = iota
-	Completed
+	TaskStatusPending TaskStatus = iota
+	TaskStatusCompleted
 )
+
+func (t Task) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("ID", t.ID.String()),
+		slog.String("Name", t.Name),
+		slog.String("Status", t.Status.String()),
+		slog.String("ProjectID", t.ProjectID.String()),
+		slog.Time("CreatedAt", t.CreatedAt),
+		slog.Time("UpdatedAt", t.UpdatedAt),
+		slog.Int("Order", t.Order),
+		slog.Any("SubtaskIDs", t.Subtasks),
+		slog.Any("ParentTaskID", t.ParentTaskID),
+	)
+}

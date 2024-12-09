@@ -1,16 +1,25 @@
 package task
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/murasakiwano/todoctian/server/internal"
 )
 
+// DeleteTask method    Deletes a task if it exists. If it does not, it is a no-op.
 func (ts *TaskService) DeleteTask(id uuid.UUID) (Task, error) {
 	task, err := ts.taskDB.Get(id)
 	if err != nil {
-		return Task{}, fmt.Errorf("Could not get task from DB: %w", err)
+		if !errors.Is(err, internal.ErrNotFound) {
+			return Task{}, fmt.Errorf("Could not get task from DB: %w", err)
+		}
+
+		ts.logger.Warn("task does not exist, nothing to do", slog.String("taskID", id.String()))
+		return Task{}, nil
 	}
 
 	err = ts.maybeDeleteSubtasks(task)
@@ -28,14 +37,14 @@ func (ts *TaskService) DeleteTask(id uuid.UUID) (Task, error) {
 
 func (ts *TaskService) maybeDeleteSubtasks(task Task) error {
 	// Does the task have any subtasks?
-	if len(task.SubtaskIDs) == 0 {
+	if len(task.Subtasks) == 0 {
 		return nil
 	}
 	// Delete the subtasks recursively, bottom-up
-	for _, subtaskID := range task.SubtaskIDs {
-		_, err := ts.DeleteTask(subtaskID)
+	for _, subtask := range task.Subtasks {
+		_, err := ts.DeleteTask(subtask.ID)
 		if err != nil {
-			return fmt.Errorf("Failed to delete subtask %s of task %s: %w", subtaskID, task.ID, err)
+			return fmt.Errorf("Failed to delete subtask %s of task %s: %w", subtask, task.ID, err)
 		}
 	}
 
@@ -47,6 +56,12 @@ func (ts *TaskService) rearrangeTaskSiblings(task Task) error {
 	if err != nil {
 		return fmt.Errorf("Failed to fetch siblings for task %s: %w", task.ID, err)
 	}
+
+	slog.Debug(
+		"found task siblings",
+		slog.Any("task", task),
+		slog.Any("siblings", siblings),
+	)
 
 	if len(siblings) <= 1 {
 		return nil
@@ -64,6 +79,8 @@ func (ts *TaskService) rearrangeTaskSiblings(task Task) error {
 	if err != nil {
 		return fmt.Errorf("Failed to update siblings of task %s: %w", task.ID, err)
 	}
+
+	slog.Debug("task siblings after rearrangement", slog.Any("siblings", siblings))
 
 	return nil
 }
