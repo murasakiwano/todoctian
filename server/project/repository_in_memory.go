@@ -68,3 +68,12 @@ func (r *ProjectRepositoryInMemory) GetByName(name string) (Project, error) {
 
 	return Project{}, internal.NewNotFoundError(fmt.Sprintf("Project \"%s\"", name))
 }
+
+func (r *ProjectRepositoryInMemory) ListProjects() ([]Project, error) {
+	projects := make([]Project, len(r.projects))
+	for _, p := range r.projects {
+		projects = append(projects, p)
+	}
+
+	return projects, nil
+}

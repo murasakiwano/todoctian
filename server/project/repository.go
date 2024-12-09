@@ -12,6 +12,7 @@ type ProjectRepository interface {
 	Create(project Project) error
 	Get(id uuid.UUID) (Project, error)
 	GetByName(name string) (Project, error)
-	Delete(id uuid.UUID) (Project, error)
+	ListProjects() ([]Project, error)
 	Rename(id uuid.UUID, newName string) error
+	Delete(id uuid.UUID) (Project, error)
 }
