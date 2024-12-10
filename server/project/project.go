@@ -10,7 +10,6 @@ import (
 // its name.
 type Project struct {
 	CreatedAt time.Time
-	UpdatedAt time.Time
 	Name      string      // Name of the project
 	Tasks     []uuid.UUID // IDs of the project's tasks
 	ID        uuid.UUID   // ID of the project
@@ -18,12 +17,11 @@ type Project struct {
 
 // Create a new instance of a project.
 func NewProject(name string) Project {
-	now := time.Now()
+	now := time.Now().UTC()
 	return Project{
 		ID:        uuid.New(),
 		Name:      name,
 		Tasks:     []uuid.UUID{},
 		CreatedAt: now,
-		UpdatedAt: now,
 	}
 }

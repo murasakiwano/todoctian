@@ -1,111 +1,137 @@
 package project
 
 import (
+	"context"
+	"log"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/murasakiwano/todoctian/server/testhelpers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestCreateProject_Success(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
-
-	_, err := service.CreateProject("My test project")
-	if err != nil {
-		t.Fatalf("expected project creation to succeed, but got error: %v", err)
-	}
+type ProjectServiceTestSuite struct {
+	suite.Suite
+	pgContainer *testhelpers.PostgresContainer
+	service     *ProjectService
+	ctx         context.Context
 }
 
-func TestCreateProject_AlreadyExists(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
-
-	_, err := service.CreateProject("My test project")
+func (suite *ProjectServiceTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+	pgContainer, err := testhelpers.CreatePostgresContainer(suite.ctx)
 	if err != nil {
-		t.Fatalf("expected first project creation to succeed, but got error: %v", err)
+		log.Fatal(err)
 	}
 
-	_, err = service.CreateProject("My test project")
-	if err == nil {
-		t.Fatal("expected second project creation to fail due to duplicate name, but it succeeded")
+	suite.pgContainer = pgContainer
+	repository, err := NewProjectRepositoryPostgres(suite.ctx, suite.pgContainer.ConnectionString)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	suite.service = NewProjectService(repository)
 }
 
-func TestDeleteProject_Success(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
-
-	project, err := service.CreateProject("My test project")
+func (suite *ProjectServiceTestSuite) SetupTest() {
+	t := suite.T()
+	t.Log("Cleaning up database before test...")
+	conn, err := pgx.Connect(suite.ctx, suite.pgContainer.ConnectionString)
 	if err != nil {
-		t.Fatalf("expected project creation to succeed, but got error: %v", err)
+		t.Fatalf("Unable to connect to database: %v\n", err)
 	}
-
-	_, err = service.DeleteProject(project.ID)
-	if err != nil {
-		t.Fatalf("expected project deletion to succeed, but got error: %v", err)
-	}
+	conn.Query(suite.ctx, "DELETE FROM projects;") // Cleanup everything before each test
+	conn.Close(suite.ctx)
 }
 
-func TestDeleteProject_NonExistentProject(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
+func (suite *ProjectServiceTestSuite) TestCreateProject_Success() {
+	t := suite.T()
+
+	_, err := suite.service.CreateProject("My test project")
+	assert.NoError(t, err)
+}
+
+func (suite *ProjectServiceTestSuite) TestCreateProject_AlreadyExists() {
+	t := suite.T()
+
+	_, err := suite.service.CreateProject("My test project")
+	assert.NoError(t, err)
+
+	_, err = suite.service.CreateProject("My test project")
+	assert.Error(t, err)
+}
+
+func (suite *ProjectServiceTestSuite) TestDeleteProject_Success() {
+	t := suite.T()
+
+	project, err := suite.service.CreateProject("My test project")
+	assert.NoError(t, err)
+
+	_, err = suite.service.DeleteProject(project.ID)
+	assert.NoError(t, err)
+}
+
+func (suite *ProjectServiceTestSuite) TestDeleteProject_NonExistentProject() {
+	t := suite.T()
 
 	// Attempt to delete a non-existent project
-	_, err := service.DeleteProject(uuid.New())
-	if err == nil {
-		t.Fatal("expected deleting a non-existent project to fail, but it succeeded")
-	}
+	_, err := suite.service.DeleteProject(uuid.New())
+	assert.Error(t, err)
 }
 
-func TestRenameProject_SuccessfulRename(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
+func (suite *ProjectServiceTestSuite) TestRenameProject_SuccessfulRename() {
+	t := suite.T()
 	oldName := "My test project"
 	newName := "New test project name"
 
-	project, _ := service.CreateProject(oldName)
-	err := service.RenameProject(project.ID, newName)
+	project, _ := suite.service.CreateProject(oldName)
+	err := suite.service.RenameProject(project.ID, newName)
 	if err != nil {
 		t.Fatalf("expected rename to succeed, but got error: %v", err)
 	}
 }
 
-func TestRenameProject_ReuseOldNameAfterRename(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
+func (suite *ProjectServiceTestSuite) TestRenameProject_ReuseOldNameAfterRename() {
+	t := suite.T()
 	oldName := "My test project"
 	newName := "New test project name"
 
-	project, _ := service.CreateProject(oldName)
-	err := service.RenameProject(project.ID, newName)
-	if err != nil {
-		t.Fatalf("expected rename to succeed, but got error: %v", err)
-	}
+	project, _ := suite.service.CreateProject(oldName)
+	err := suite.service.RenameProject(project.ID, newName)
+	assert.NoError(t, err)
 
 	// Should allow creating a new project with the old name
-	_, err = service.CreateProject(oldName)
-	if err != nil {
-		t.Fatalf("expected to create a project with the old name, but got error: %v", err)
-	}
+	_, err = suite.service.CreateProject(oldName)
+	assert.NoError(t, err)
 }
 
-func TestRenameProject_FailOnDuplicateName(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
+func (suite *ProjectServiceTestSuite) TestRenameProject_FailOnDuplicateName() {
+	t := suite.T()
 	name := "My test project"
 
-	_, _ = service.CreateProject(name)
-	project2, _ := service.CreateProject("Another project")
+	_, _ = suite.service.CreateProject(name)
+	project2, _ := suite.service.CreateProject("Another project")
 
 	// Renaming project2 to the same name as project1 should fail
-	err := service.RenameProject(project2.ID, name)
+	err := suite.service.RenameProject(project2.ID, name)
 	if err == nil {
 		t.Fatal("expected renaming to a duplicate name to fail, but it succeeded")
 	}
 }
 
-func TestRenameProject_NoOpForSameName(t *testing.T) {
-	service := NewProjectService(NewProjectRepositoryInMemory())
+func (suite *ProjectServiceTestSuite) TestRenameProject_NoOpForSameName() {
+	t := suite.T()
 	name := "My test project"
 
-	project, _ := service.CreateProject(name)
+	project, _ := suite.service.CreateProject(name)
 
 	// Renaming to the same name should succeed and be a NOOP
-	err := service.RenameProject(project.ID, name)
-	if err != nil {
-		t.Fatalf("expected renaming to the same name to succeed, but got error: %v", err)
-	}
+	err := suite.service.RenameProject(project.ID, name)
+	assert.NoError(t, err)
+}
+
+func TestProjectService(t *testing.T) {
+	suite.Run(t, new(ProjectServiceTestSuite))
 }
