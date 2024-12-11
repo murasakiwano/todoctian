@@ -1,0 +1,23 @@
+services:
+  client:
+    build: ./client
+  server:
+    build: ./server
+    environment:
+      PG_DB_URL: "postgres://gohan:todolist@db:5432/todoctian?sslmode=disable"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    restart: always
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: gohan
+      POSTGRES_PASSWORD: todolist
+      POSTGRES_DB: todoctian
+    ports:
+      - "5432:5432"
+

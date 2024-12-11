@@ -1,0 +1,4 @@
+./api/
+queries.sql
+schema.sql
+sqlc.yaml
