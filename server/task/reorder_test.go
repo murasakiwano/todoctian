@@ -64,7 +64,7 @@ func (suite *ReorderTaskTestSuite) TestKeepOrder() {
 	err = suite.taskService.ReorderTask(firstTask, 0)
 	require.NoError(t, err, "failed to reorder task with the same order it had: %s", err)
 
-	firstTask, err = suite.taskService.taskDB.Get(firstTask.ID)
+	firstTask, err = suite.taskService.repository.Get(firstTask.ID)
 	if assert.NoError(t, err) {
 		assert.Equal(t,
 			0,
@@ -87,7 +87,7 @@ func (suite *ReorderTaskTestSuite) TestIncreaseOrder() {
 	err = suite.taskService.ReorderTask(firstTask, 1)
 	require.NoError(t, err)
 
-	firstTask, err = suite.taskService.taskDB.Get(firstTask.ID)
+	firstTask, err = suite.taskService.repository.Get(firstTask.ID)
 	if assert.NoError(t, err) {
 		assert.Equal(t,
 			1,
@@ -110,7 +110,7 @@ func (suite *ReorderTaskTestSuite) TestDecreaseOrder() {
 	err = suite.taskService.ReorderTask(secondTask, 0)
 	require.NoError(t, err)
 
-	secondTask, err = suite.taskService.taskDB.Get(secondTask.ID)
+	secondTask, err = suite.taskService.repository.Get(secondTask.ID)
 	if assert.NoError(t, err) {
 		assert.Equal(t,
 			0,
@@ -133,7 +133,7 @@ func (suite *ReorderTaskTestSuite) TestOrderOutOfBounds() {
 	err = suite.taskService.ReorderTask(secondTask, -10)
 	require.NoError(t, err)
 
-	secondTask, err = suite.taskService.taskDB.Get(secondTask.ID)
+	secondTask, err = suite.taskService.repository.Get(secondTask.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

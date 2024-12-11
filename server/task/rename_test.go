@@ -61,7 +61,7 @@ func (suite *RenameTaskTestSuite) TestSuccess() {
 	newTaskName := "My new test task"
 	err = suite.taskService.RenameTask(task.ID, newTaskName)
 	if assert.NoError(t, err) {
-		task, _ = suite.taskService.taskDB.Get(task.ID)
+		task, _ = suite.taskService.repository.Get(task.ID)
 		assert.Equal(t, newTaskName, task.Name)
 	}
 }

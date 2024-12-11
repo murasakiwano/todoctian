@@ -12,7 +12,7 @@ import (
 
 // DeleteTask method    Deletes a task if it exists. If it does not, it is a no-op.
 func (ts *TaskService) DeleteTask(id uuid.UUID) (Task, error) {
-	task, err := ts.taskDB.Get(id)
+	task, err := ts.repository.Get(id)
 	if err != nil {
 		if !errors.Is(err, internal.ErrNotFound) {
 			return Task{}, fmt.Errorf("Could not get task from DB: %w", err)
@@ -32,12 +32,12 @@ func (ts *TaskService) DeleteTask(id uuid.UUID) (Task, error) {
 		return Task{}, fmt.Errorf("Failed to rearrange siblings of task %s: %w", task.ID, err)
 	}
 
-	return ts.taskDB.Delete(id)
+	return ts.repository.Delete(id)
 }
 
 func (ts *TaskService) maybeDeleteSubtasks(task Task) error {
 	// Does the task have any subtasks?
-	subtasks, err := ts.taskDB.GetSubtasksDeep(task.ID)
+	subtasks, err := ts.repository.GetSubtasksDeep(task.ID)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (ts *TaskService) rearrangeTaskSiblings(task Task) error {
 	}
 
 	_ = slices.Delete(siblings, task.Order, task.Order+1)
-	err = ts.taskDB.BatchUpdateOrder(siblings[:len(siblings)-1])
+	err = ts.repository.BatchUpdateOrder(siblings[:len(siblings)-1])
 	if err != nil {
 		return fmt.Errorf("Failed to update siblings of task %s: %w", task.ID, err)
 	}

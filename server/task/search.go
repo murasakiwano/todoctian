@@ -10,7 +10,7 @@ import (
 )
 
 func (ts *TaskService) SearchTaskName(partial string, projectID uuid.UUID) ([]Task, error) {
-	tasks, err := ts.taskDB.GetTasksByProject(projectID)
+	tasks, err := ts.repository.GetTasksByProject(projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,5 +58,5 @@ func (ts *TaskService) SearchTaskName(partial string, projectID uuid.UUID) ([]Ta
 
 // Returns the tasks with given status in a specific project.
 func (ts *TaskService) SearchTaskByStatus(status TaskStatus, projectID uuid.UUID) ([]Task, error) {
-	return ts.taskDB.GetTasksByStatus(projectID, status)
+	return ts.repository.GetTasksByStatus(projectID, status)
 }

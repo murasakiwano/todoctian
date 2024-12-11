@@ -11,7 +11,7 @@ import (
 // pending, since it does not make sense to have a collection of tasks be marked as completed
 // when not all steps have been done.
 func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
-	task, err := ts.taskDB.Get(id)
+	task, err := ts.repository.Get(id)
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 	}
 
 	task.Status = TaskStatusPending
-	err = ts.taskDB.UpdateTaskStatus(task.ID, TaskStatusPending)
+	err = ts.repository.UpdateTaskStatus(task.ID, TaskStatusPending)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 		return nil
 	}
 
-	parentTask, err := ts.taskDB.Get(*task.ParentTaskID)
+	parentTask, err := ts.repository.Get(*task.ParentTaskID)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 // completed. Here we do a tree traversal downwards and then upwards. We stop the traversal whenever
 // we find an already completed task, since it means that the work has already been done for it.
 func (ts *TaskService) CompleteTask(id uuid.UUID) error {
-	task, err := ts.taskDB.Get(id)
+	task, err := ts.repository.Get(id)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (ts *TaskService) CompleteTask(id uuid.UUID) error {
 func (ts *TaskService) markTaskAsCompleted(task Task) error {
 	task.Status = TaskStatusCompleted
 	ts.logger.Debug("marked task as completed", slog.String("taskID", task.ID.String()))
-	err := ts.taskDB.UpdateTaskStatus(task.ID, TaskStatusCompleted)
+	err := ts.repository.UpdateTaskStatus(task.ID, TaskStatusCompleted)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (ts *TaskService) markTaskAsCompleted(task Task) error {
 }
 
 func (ts *TaskService) completeSubtasks(task Task) error {
-	subtasks, err := ts.taskDB.GetSubtasksDeep(task.ID)
+	subtasks, err := ts.repository.GetSubtasksDeep(task.ID)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (ts *TaskService) completeParentTask(task Task) error {
 		slog.String("taskID", task.ID.String()),
 		slog.String("parentTaskID", task.ParentTaskID.String()),
 	)
-	parentTask, err := ts.taskDB.Get(*task.ParentTaskID)
+	parentTask, err := ts.repository.Get(*task.ParentTaskID)
 	if err != nil {
 		return err
 	}

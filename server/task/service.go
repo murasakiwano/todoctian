@@ -12,15 +12,15 @@ import (
 )
 
 type TaskService struct {
-	taskDB    TaskRepository
-	projectDB project.ProjectRepository
-	logger    slog.Logger
+	repository TaskRepository
+	projectDB  project.ProjectRepository
+	logger     slog.Logger
 }
 
 func NewTaskService(taskRepository TaskRepository, projectRepository project.ProjectRepository) *TaskService {
 	return &TaskService{
-		taskDB:    taskRepository,
-		projectDB: projectRepository,
+		repository: taskRepository,
+		projectDB:  projectRepository,
 		logger: *slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
 		})),
@@ -42,7 +42,7 @@ func (ts TaskService) ValidateTask(task Task) error {
 	}
 	// Check if the task parent is valid
 	if task.ParentTaskID != nil {
-		_, err = ts.taskDB.Get(*task.ParentTaskID)
+		_, err = ts.repository.Get(*task.ParentTaskID)
 		if err != nil {
 			return err
 		}
@@ -59,13 +59,13 @@ func (ts TaskService) ValidateTask(task Task) error {
 func (ts TaskService) FetchTaskSiblings(task Task) ([]Task, error) {
 	siblings := []Task{}
 	if task.IsInProjectRoot() {
-		taskSiblings, err := ts.taskDB.GetTasksInProjectRoot(task.ProjectID)
+		taskSiblings, err := ts.repository.GetTasksInProjectRoot(task.ProjectID)
 		if err != nil {
 			return nil, err
 		}
 		siblings = taskSiblings
 	} else {
-		s, err := ts.taskDB.GetSubtasksDirect(*task.ParentTaskID)
+		s, err := ts.repository.GetSubtasksDirect(*task.ParentTaskID)
 		if err != nil {
 			return siblings, err
 		}
@@ -77,5 +77,5 @@ func (ts TaskService) FetchTaskSiblings(task Task) ([]Task, error) {
 }
 
 func (ts TaskService) FindTaskByID(taskID uuid.UUID) (Task, error) {
-	return ts.taskDB.Get(taskID)
+	return ts.repository.Get(taskID)
 }

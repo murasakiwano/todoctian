@@ -63,7 +63,7 @@ func (suite *DeleteTaskTestSuite) TestSuccess() {
 	_, err = suite.taskService.DeleteTask(task.ID)
 	require.NoError(t, err)
 
-	task, err = suite.taskService.taskDB.Get(task.ID)
+	task, err = suite.taskService.repository.Get(task.ID)
 	require.Error(t, err)
 
 	assert.True(t, errors.Is(err, internal.ErrNotFound))

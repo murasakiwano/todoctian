@@ -66,7 +66,7 @@ func (suite *CreateTaskTestSuite) TestUpdatesParentTask() {
 	subtask, err := suite.taskService.CreateTask("My subtask", suite.projectID, &task.ID)
 	require.NoError(t, err, "expected subtask creation to succeed, but it failed: %v", err)
 
-	subtasks, err := suite.taskService.taskDB.GetSubtasksDirect(task.ID)
+	subtasks, err := suite.taskService.repository.GetSubtasksDirect(task.ID)
 	require.NoError(t, err)
 
 	require.NotEmpty(t, subtasks, "adding a subtask to a task did not successfully update the parent task")
@@ -75,7 +75,7 @@ func (suite *CreateTaskTestSuite) TestUpdatesParentTask() {
 	subtask, err = suite.taskService.CreateTask("My second subtask", suite.projectID, &task.ID)
 	require.NoError(t, err)
 
-	subtasks, err = suite.taskService.taskDB.GetSubtasksDirect(task.ID)
+	subtasks, err = suite.taskService.repository.GetSubtasksDirect(task.ID)
 	require.NoError(t, err)
 
 	require.NotEmpty(t, subtasks, "adding a subtask to a task did not successfully update the parent task")
@@ -134,7 +134,7 @@ func (suite *CreateTaskTestSuite) TestSubtaskDoesNotAffectParentTaskOrder() {
 		"expected subtask to have order 0, it actually had %d", parentTask.Order,
 	)
 
-	parentTask, err = suite.taskService.taskDB.Get(parentTask.ID)
+	parentTask, err = suite.taskService.repository.Get(parentTask.ID)
 	require.NoError(t, err)
 
 	assert.Equal(

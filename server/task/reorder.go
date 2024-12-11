@@ -20,7 +20,7 @@ import (
 //   - If the current order is greater than the new order, then we need to add 1 to all other siblings
 func (ts *TaskService) ReorderTask(task Task, newOrder int) error {
 	// Check if the task exists
-	_, err := ts.taskDB.Get(task.ID)
+	_, err := ts.repository.Get(task.ID)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (ts *TaskService) ReorderTask(task Task, newOrder int) error {
 	slices.SortFunc(siblings, cmpTasks)
 	ts.logger.Debug("Siblings are now like this", slog.Any("siblings", siblings))
 
-	ts.taskDB.BatchUpdateOrder(siblings)
+	ts.repository.BatchUpdateOrder(siblings)
 	return nil
 }
 
