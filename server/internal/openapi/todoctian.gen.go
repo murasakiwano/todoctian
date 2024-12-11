@@ -75,11 +75,9 @@ type TaskStatus struct {
 func (t *TaskStatus) ToValue() string {
 	return t.value
 }
-
 func (t TaskStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.value)
 }
-
 func (t *TaskStatus) UnmarshalJSON(data []byte) error {
 	var value string
 	if err := json.Unmarshal(data, &value); err != nil {
@@ -87,7 +85,6 @@ func (t *TaskStatus) UnmarshalJSON(data []byte) error {
 	}
 	return t.FromValue(value)
 }
-
 func (t *TaskStatus) FromValue(value string) error {
 	switch value {
 
@@ -117,11 +114,9 @@ type PostTasksJSONBody Task
 
 // PatchTasksTaskIDStatusJSONBody defines parameters for PatchTasksTaskIDStatus.
 type PatchTasksTaskIDStatusJSONBody struct {
-	Status *PatchTasksTaskIDStatusJSONBodyStatus `json:"status,omitempty"`
+	// The current status of the task.
+	Status *TaskStatus `json:"status,omitempty"`
 }
-
-// PatchTasksTaskIDStatusJSONBodyStatus defines parameters for PatchTasksTaskIDStatus.
-type PatchTasksTaskIDStatusJSONBodyStatus string
 
 // PostProjectsJSONRequestBody defines body for PostProjects for application/json ContentType.
 type PostProjectsJSONRequestBody PostProjectsJSONBody
@@ -333,7 +328,7 @@ type ServerInterfaceWrapper struct {
 func (siw *ServerInterfaceWrapper) GetProjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetProjects(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -351,7 +346,7 @@ func (siw *ServerInterfaceWrapper) GetProjects(w http.ResponseWriter, r *http.Re
 func (siw *ServerInterfaceWrapper) PostProjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PostProjects(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -377,7 +372,7 @@ func (siw *ServerInterfaceWrapper) DeleteProjectsProjectID(w http.ResponseWriter
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.DeleteProjectsProjectID(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -403,7 +398,7 @@ func (siw *ServerInterfaceWrapper) GetProjectsProjectID(w http.ResponseWriter, r
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetProjectsProjectID(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -429,7 +424,7 @@ func (siw *ServerInterfaceWrapper) PatchProjectsProjectID(w http.ResponseWriter,
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PatchProjectsProjectID(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -455,7 +450,7 @@ func (siw *ServerInterfaceWrapper) GetProjectsProjectIDTasks(w http.ResponseWrit
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetProjectsProjectIDTasks(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -473,7 +468,7 @@ func (siw *ServerInterfaceWrapper) GetProjectsProjectIDTasks(w http.ResponseWrit
 func (siw *ServerInterfaceWrapper) GetTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetTasks(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -491,7 +486,7 @@ func (siw *ServerInterfaceWrapper) GetTasks(w http.ResponseWriter, r *http.Reque
 func (siw *ServerInterfaceWrapper) PostTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PostTasks(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -517,7 +512,7 @@ func (siw *ServerInterfaceWrapper) DeleteTasksTaskID(w http.ResponseWriter, r *h
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.DeleteTasksTaskID(w, r, taskID)
 		if resp != nil {
 			if resp.body != nil {
@@ -543,7 +538,7 @@ func (siw *ServerInterfaceWrapper) GetTasksTaskID(w http.ResponseWriter, r *http
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetTasksTaskID(w, r, taskID)
 		if resp != nil {
 			if resp.body != nil {
@@ -569,7 +564,7 @@ func (siw *ServerInterfaceWrapper) PatchTasksTaskIDStatus(w http.ResponseWriter,
 		return
 	}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PatchTasksTaskIDStatus(w, r, taskID)
 		if resp != nil {
 			if resp.body != nil {
@@ -733,25 +728,26 @@ func WithErrorHandler(handler func(w http.ResponseWriter, r *http.Request, err e
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
-	"H4sIAAAAAAAC/8xYwY7bNhD9FYItkIu6dppcqptbA4WBtjDS7SnIgSuNbGYlUiFHSQ1D/15wKMqyJVu2",
-	"d+30ZovUDPnezOMTtzzRRakVKLQ83nKbrKEQ9HNp9GdI0P0sjS7BoAQaSAwIhHRGQynYxMgSpVY85o9r",
-	"YDQstWKpQGA6Y7gGVvpgDzzimTaFQB5zN/4TygJ4xHFTAo+5RSPVitcRl2k/+j9KfqmAyRQUykyCYZk2",
-	"R8NXlUyHIitRQD/2X6IYWuzB23X7RD8ROHXEH4V9fh2QUNjnWyHUi309PCFU79VSGFDo8FjM+yEW8xZf",
-	"mkdxIiYzJpHBv9KiPWuBDTsjKfykdr3sCXKtVpahPiuJRYGVPcJdZWj9fs4hKqCqgscfeQkqdcEi6rAc",
-	"EFL+aShT9YSE2EC2GculxZBhMbd7dL6xrHmZgJMIBcUY3VzzQBgjNkM17R5JlemhBaFOtV/VbLlguBbI",
-	"CqHECmzA3DKhUlqgZd8krvcWiRJzl+pRpzpBKRSP+Fcw1od/+zB9mLoV6hKUKCWP+buH6cM77moL17S7",
-	"SUjj/qxgoL8+ABoJX4GJFj6R5+3y3DJcp1L/LVIe898BlyFoxA3YUivr2/jn6ZS6WSsERblEWeYyoZcn",
-	"n61LGFTT/WpJ+NFAxmP+w2Snr5NGXCdBWftU1NHBXv4Y3EBNdVMUwmz88vfGqUm0HUBmlqZMMAXfdv2h",
-	"fTkFVvvgLLXdR+dLBRZ/1enmImDOwsPtyyWQBlIeo6mg7vHx9jZp94Fqhlij4sxWSQLWZlWebw7h/43m",
-	"MLE7Ntx4W6aTbStYtWfEacFQ1Rb6aycMdZFE23RSZnQxRtWcQgeylq1OkjKLAhCM5fHHLZcuoesoHvS+",
-	"o6qHFEQdOEekpf7Uo+t9f6cBXI9ED9yIvz/1ltLIMl2p9JAHv/sOD2yWW91ksd1T4U0DKiUbk5BAx9OG",
-	"2FjMT+rHCdD7B0nvuCIZvx8303u00oxZqVZ5Z49XM0xCdxDO+w5M1gNmqCRzJZR3F1KtOgXgoB0QOxfp",
-	"uzfQdQq77z+HbZyrOif/bnTIPI/a3XMUenpPha6I5JeIiJv6y4mpDippmcgNiHTDUDyDOqzMD0DTxK4q",
-	"jx0BE1KeS72LPwO8h3V1jJoJloBBIVWXv3FdeqT03/NEuIGhok+wC9zUsbPgBbK081+diK4Irud7kNDA",
-	"3/8H1NnQyocR8licYU/pk42KPBy/Up1jVHfovL5L9Xjc16Luch7ouMPniDlty/imKxjtitYWBz67/TDZ",
-	"+m/e8xwxVcP5BpiKoLmFOEfoMEy9se8l0i4zvfTKuONt4B03s/4q5KSTPYneKQ8bLkDuhfD05jXeWtcW",
-	"3ytI2jOtR/tgsrtwOuJm/xTmOTAoLGsvlZg27n9z3XTE0nZI/dsnumdjvIaf3eFz2QXbCyzsAMvNld9l",
-	"pvN0fYSvlPZKj1K4WXX9XwAAAP//w06DkZ4XAAA=",
+
+	"H4sIAAAAAAAC/8xYwY7bNhD9FYItkIu6dppcqpvbBQoDbWEk21OQA1ca2cxKpEKONjUM/XvBoSjLlmzZ",
+	"3rWTm3dJzpDvzTw+ccMTXZRagULL4w23yQoKQT8XRn+BBN3P0ugSDEqggcSAQEhnNJSCTYwsUWrFY/6w",
+	"AkbDUiuWCgSmM4YrYKUPdscjnmlTCOQxd+O/oCyARxzXJfCYWzRSLXkdcZn2o/+r5NcKmExBocwkGJZp",
+	"czB8Vcl0KLISBfRj/yOKoc3ura7b/+hHAqeO+IOwT68DEgr7dC2EerEvhyeE6i0thQGFDo/5fT/E/L7F",
+	"l+ZRnIjJjElk8J+0aE/aYMPOSAo/qd0ve4Rcq6VlqE9KYlFgRUT+bCDjMf9psm2USdMlE3fUj36mW1M9",
+	"Ip3d9nc2Y7m0GHY3v7c7xLyxrFlMEEiEgmKMbrP5hzBGrA9X58f2MAOFWBkiwx94n2JQVcHjT7wElbqU",
+	"EclFDggp/9zvDleVKtNDx0edao/BbDFnuBLICqHEEmzgyjKhUsps2TeJqx1IUGLuUj3oVCcoheIRfwZj",
+	"ffi3d9O7qTutLkGJUvKYv7ub3r3jriZxRUefhDTujyUM9OUHQCPhGZhoyRJ53m7PbcN1OPXtPOUx/xNw",
+	"EYJG3IAttbK+/X+dTkkFtEJQlEuUZS4TWjz5Yl3CoLbuV0v5sXILitwnvo72zvLX4AFqqtKiEGbtt78z",
+	"Ts2l7QAyszRlgin4tu0r7esksNoHZ6HtLjpfK7D4u07XZwFzEh7uXC6BNJDyGE0FdY+Pt9dJuwtUM8Qa",
+	"9We2ShKwNqvyfL0P/x80h4ntdePG2zKdbFqhqz0jru2GqrbQz50w1EUSbdNJmdHFGFX3FDqQtWj1lRRd",
+	"FIBgLI8/bbh0CV1H8XBPdNR4n4KoA+eIkNWfe3S97580gOuR6IEb8ffHVimNLNOVSvd58Kfv8MBmudVN",
+	"Ftu9Td40oFKyMQkJdDyuiY35/VH9OAJ6X7N71xxdGrfjZnqLVpoxK9Uy75zxYoZJ6PbCeb+CyWrARJVk",
+	"yoTyrkSqZacAHLQDYuciffcGukxhd33rsP1zVefk340Ome5Rm3yKQk9vqdAVkfwSEXFTfzsy1UElLRO5",
+	"AZGuGYonUPuV+QFomthW5aErYELKc6538XeA976ujlEzwRIwKKTq8jeuSw+U/nveCFcwVPTpdoabOnQX",
+	"vECWtv6rE9EVweV8DxIa+PtxQJ0N7XwYIY/FCfaUPvWoyMP1K9UpRnWLzuu7VI/HbS3qNueejjt8DpjT",
+	"toyvuoPRrmhtceCz2w+Tjf/CPs0RUzWcboCpCJrXi1OEDsPUK/teIu0800tLxh1vA++4mfVPKEed7FH0",
+	"jnnY8NZwK4SnV6/x1rq2+F5A0o5pPdgHk+1D1QE3+7cwT4FBYVn7fsO0cX83LzsHLG2H1OYR6ZaN8Rp+",
+	"9vyHvBeY1wF+m3e18+zm8coI3yft0yGlcLPq+v8AAAD//8k1BLjQFwAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
@@ -786,7 +782,7 @@ func decodeSpecCached() func() ([]byte, error) {
 
 // Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
 func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
-	res := make(map[string]func() ([]byte, error))
+	var res = make(map[string]func() ([]byte, error))
 	if len(pathToFile) > 0 {
 		res[pathToFile] = rawSpec
 	}
@@ -800,12 +796,12 @@ func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
 // Externally referenced files must be embedded in the corresponding golang packages.
 // Urls can be supported but this task was out of the scope.
 func GetSwagger() (swagger *openapi3.T, err error) {
-	resolvePath := PathToRawSpec("")
+	var resolvePath = PathToRawSpec("")
 
 	loader := openapi3.NewLoader()
 	loader.IsExternalRefsAllowed = true
 	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
-		pathToFile := url.String()
+		var pathToFile = url.String()
 		pathToFile = path.Clean(pathToFile)
 		getSpec, ok := resolvePath[pathToFile]
 		if !ok {

@@ -217,8 +217,7 @@ paths:
               type: object
               properties:
                 status:
-                  type: string
-                  enum: [pending, completed]
+                  $ref: "#/components/schemas/TaskStatus"
       responses:
         "200":
           description: Task status updated successfully.
@@ -257,9 +256,7 @@ components:
           type: string
           description: Name of the task.
         status:
-          type: string
-          enum: [pending, completed]
-          description: The current status of the task.
+          $ref: "#/components/schemas/TaskStatus"
         parentTaskID:
           type: string
           format: uuid
@@ -274,3 +271,8 @@ components:
           type: string
           format: date-time
           description: The creation date of the task.
+
+    TaskStatus:
+      type: string
+      enum: [pending, completed]
+      description: The current status of the task.
