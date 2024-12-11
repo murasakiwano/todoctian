@@ -2,12 +2,14 @@ package task
 
 import (
 	"context"
+	"errors"
 	"log"
 	"slices"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/murasakiwano/todoctian/server/internal"
 	"github.com/murasakiwano/todoctian/server/project"
 	"github.com/murasakiwano/todoctian/server/testhelpers"
 	"github.com/stretchr/testify/assert"
@@ -99,6 +101,19 @@ func (suite *TaskRepoPostgresTestSuite) TestCreateTask() {
 	assert.NoError(t, err)
 }
 
+func (suite *TaskRepoPostgresTestSuite) TestCreateDuplicateTaskShouldReturnAlreadyExistsError() {
+	t := suite.T()
+
+	task := NewTask("Test task", suite.projectID, nil)
+	err := suite.repository.Create(task)
+	require.NoError(t, err)
+
+	err = suite.repository.Create(task)
+	if assert.Error(t, err) {
+		assert.True(t, errors.Is(err, internal.ErrAlreadyExists))
+	}
+}
+
 func (suite *TaskRepoPostgresTestSuite) TestGetTask() {
 	t := suite.T()
 
@@ -112,6 +127,15 @@ func (suite *TaskRepoPostgresTestSuite) TestGetTask() {
 		assert.Equal(t, task.Name, retrievedTask.Name)
 		assert.Equal(t, task.ProjectID, retrievedTask.ProjectID)
 	}
+}
+
+func (suite *TaskRepoPostgresTestSuite) TestGetUnexistentTaskShouldReturnNotFoundError() {
+	t := suite.T()
+
+	_, err := suite.repository.Get(uuid.New())
+	require.Error(t, err)
+
+	assert.True(t, errors.Is(err, internal.ErrNotFound))
 }
 
 func (suite *TaskRepoPostgresTestSuite) TestGetSubtasksDirect() {

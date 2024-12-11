@@ -84,12 +84,16 @@ func (ts *TaskService) markTaskAsCompleted(task Task) error {
 }
 
 func (ts *TaskService) completeSubtasks(task Task) error {
-	if len(task.Subtasks) == 0 {
+	subtasks, err := ts.taskDB.GetSubtasksDeep(task.ID)
+	if err != nil {
+		return err
+	}
+	if len(subtasks) == 0 {
 		return nil
 	}
 
 	ts.logger.Debug("task has subtasks, completing them...", slog.String("taskID", task.ID.String()))
-	for _, subtask := range task.Subtasks {
+	for _, subtask := range subtasks {
 		err := ts.CompleteTask(subtask.ID)
 		if err != nil {
 			ts.logger.Error(

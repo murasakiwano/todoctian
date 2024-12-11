@@ -19,8 +19,6 @@ type Task struct {
 	ParentTaskID *uuid.UUID
 	// The name of the task
 	Name string
-	// The subtasks of the task
-	Subtasks []Task
 	// Task status (whether it's completed or not)
 	Status TaskStatus
 	// The ID of the Project this task belongs to
@@ -33,10 +31,9 @@ type Task struct {
 
 func (t Task) String() string {
 	return fmt.Sprintf(
-		"{ID: %s Name: %s SubtaskIDs: %v Status: %s ProjectID: %s ParentTaskID: %s Order: %d}",
+		"{ID: %s Name: %s Status: %s ProjectID: %s ParentTaskID: %s Order: %d}",
 		t.ID,
 		t.Name,
-		t.Subtasks,
 		t.Status,
 		t.ProjectID,
 		t.ParentTaskID,
@@ -55,7 +52,6 @@ func NewTask(name string, projectID uuid.UUID, parentTaskID *uuid.UUID) Task {
 		ProjectID:    projectID,
 		Status:       TaskStatusPending,
 		ParentTaskID: parentTaskID,
-		Subtasks:     []Task{},
 		Order:        0, // 0 means the order is unset
 		CreatedAt:    now,
 	}
@@ -80,10 +76,6 @@ const (
 
 func (t Task) LogValue() slog.Value {
 	subtaskIDs := []uuid.UUID{}
-
-	for _, subtask := range t.Subtasks {
-		subtaskIDs = append(subtaskIDs, subtask.ID)
-	}
 
 	return slog.GroupValue(
 		slog.String("ID", t.ID.String()),

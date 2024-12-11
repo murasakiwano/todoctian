@@ -37,11 +37,16 @@ func (ts *TaskService) DeleteTask(id uuid.UUID) (Task, error) {
 
 func (ts *TaskService) maybeDeleteSubtasks(task Task) error {
 	// Does the task have any subtasks?
-	if len(task.Subtasks) == 0 {
+	subtasks, err := ts.taskDB.GetSubtasksDeep(task.ID)
+	if err != nil {
+		return err
+	}
+	if len(subtasks) == 0 {
 		return nil
 	}
+
 	// Delete the subtasks recursively, bottom-up
-	for _, subtask := range task.Subtasks {
+	for _, subtask := range subtasks {
 		_, err := ts.DeleteTask(subtask.ID)
 		if err != nil {
 			return fmt.Errorf("Failed to delete subtask %s of task %s: %w", subtask, task.ID, err)

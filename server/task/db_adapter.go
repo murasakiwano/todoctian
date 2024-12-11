@@ -31,7 +31,7 @@ func TaskDBToTaskModel(taskDB db.Task) (Task, error) {
 	}
 
 	// NOTE: the database guarantees that "status" is either "Pending" or "Completed"
-	var taskStatus TaskStatus = TaskStatusPending
+	taskStatus := TaskStatusPending
 	if taskDB.Status == TaskStatusCompleted.String() {
 		taskStatus = TaskStatusCompleted
 	}

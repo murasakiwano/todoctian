@@ -1,383 +1,376 @@
 package task
 
 import (
+	"context"
+	"log"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/murasakiwano/todoctian/server/project"
+	"github.com/murasakiwano/todoctian/server/testhelpers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestUpdateTaskStatus_CompleteWithoutSubtasks(t *testing.T) {
-	taskService, projectService := setupServices()
+type UpdateTaskStatusTestSuite struct {
+	suite.Suite
+	ctx         context.Context
+	pgContainer *testhelpers.PostgresContainer
+	taskService *TaskService
+	projectID   uuid.UUID
+}
 
-	project, err := projectService.CreateProject("Test Project")
+func (suite *UpdateTaskStatusTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+	pgContainer, err := testhelpers.CreatePostgresContainer(suite.ctx)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
+	suite.pgContainer = pgContainer
+	repository, err := NewTaskRepositoryPostgres(suite.ctx, suite.pgContainer.ConnectionString)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatalf("expected task to be marked completed, but an error occurred: %v", err)
-	}
+	projectRepository, err := project.NewProjectRepositoryPostgres(suite.ctx,
+		suite.pgContainer.ConnectionString,
+	)
 
-	task, err = taskService.FindTaskByID(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	suite.taskService = NewTaskService(repository, projectRepository)
+}
 
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
+// Setup database before each test
+func (suite *UpdateTaskStatusTestSuite) SetupTest() {
+	t := suite.T()
+	t.Log("cleaning up database before test...")
+	testhelpers.CleanupTasksTable(suite.ctx, t, suite.pgContainer.ConnectionString)
+	testhelpers.CleanupProjectsTable(suite.ctx, t, suite.pgContainer.ConnectionString)
+
+	projectIDs := insertTestProjectsInTheDatabase(suite.ctx, t, suite.pgContainer.ConnectionString)
+	suite.projectID = projectIDs[0]
+}
+
+func (suite *UpdateTaskStatusTestSuite) TestCompleteWithoutSubtasks() {
+	t := suite.T()
+
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
+
+	task, err = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t, TaskStatusCompleted, task.Status)
 	}
 }
 
-func TestUpdateTaskStatus_CompleteWithSubtasks(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *UpdateTaskStatusTestSuite) TestCompleteWithSubtasks() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	subtask, err := suite.taskService.CreateTask("Subtask", suite.projectID, &task.ID)
+	require.NoError(t, err)
+
+	nestedSubtask, err := suite.taskService.CreateTask("Nested subtask", suite.projectID, &subtask.ID)
+	require.NoError(t, err)
+
+	nestedSiblingSubstask, err := suite.taskService.CreateTask("Nested sibling subtask", suite.projectID, &subtask.ID)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
+
+	subtask, err = suite.taskService.FindTaskByID(subtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			subtask.Status,
+			"subtask was not marked completed successfully",
+		)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
+	nestedSubtask, err = suite.taskService.FindTaskByID(nestedSubtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			nestedSubtask.Status,
+			"nestedSubtask was not marked completed successfully",
+		)
 	}
 
-	subtask, err := taskService.CreateTask("Subtask", project.ID, &task.ID)
-	if err != nil {
-		t.Fatal(err)
+	nestedSiblingSubstask, err = suite.taskService.FindTaskByID(nestedSiblingSubstask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			nestedSiblingSubstask.Status,
+			"nestedSiblingSubtask was not marked completed successfully",
+		)
 	}
 
-	nestedSubtask, err := taskService.CreateTask("Nested subtask", project.ID, &subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	nestedSiblingSubstask, err := taskService.CreateTask("Nested sibling subtask", project.ID, &subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatalf("expected task to be marked completed, but an error occurred: %v", err)
-	}
-
-	subtask, err = taskService.FindTaskByID(subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if subtask.Status != TaskStatusCompleted {
-		t.Fatal("subtask was not marked completed successfully")
-	}
-
-	nestedSubtask, err = taskService.FindTaskByID(nestedSubtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if nestedSubtask.Status != TaskStatusCompleted {
-		t.Fatal("nestedSubtask was not marked completed successfully")
-	}
-
-	nestedSiblingSubstask, err = taskService.FindTaskByID(nestedSiblingSubstask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if nestedSiblingSubstask.Status != TaskStatusCompleted {
-		t.Fatal("nestedSiblingSubtask was not marked completed successfully")
-	}
-
-	task, err = taskService.FindTaskByID(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
+	task, err = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 }
 
-func TestUpdateTaskStatus_CompleteAlsoCompletesTheParentTask(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *UpdateTaskStatusTestSuite) TestCompleteAlsoCompletesTheParentTask() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	subtask, err := suite.taskService.CreateTask("Subtask", suite.projectID, &task.ID)
+	require.NoError(t, err)
+
+	nestedSubtask, err := suite.taskService.CreateTask("Nested subtask", suite.projectID, &subtask.ID)
+	require.NoError(t, err)
+
+	nestedSiblingSubstask, err := suite.taskService.CreateTask("Nested sibling subtask", suite.projectID, &subtask.ID)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(nestedSubtask.ID)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(nestedSiblingSubstask.ID)
+	require.NoError(t, err)
+
+	nestedSubtask, err = suite.taskService.FindTaskByID(nestedSubtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			nestedSubtask.Status,
+			"nestedSubtask was not marked completed successfully",
+		)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
+	nestedSiblingSubstask, err = suite.taskService.FindTaskByID(nestedSiblingSubstask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			nestedSiblingSubstask.Status,
+			"nestedSiblingSubtask was not marked completed successfully",
+		)
 	}
 
-	subtask, err := taskService.CreateTask("Subtask", project.ID, &task.ID)
-	if err != nil {
-		t.Fatal(err)
+	subtask, err = suite.taskService.FindTaskByID(subtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			subtask.Status,
+			"subtask was not marked completed successfully",
+		)
 	}
 
-	nestedSubtask, err := taskService.CreateTask("Nested subtask", project.ID, &subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	nestedSiblingSubstask, err := taskService.CreateTask("Nested sibling subtask", project.ID, &subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = taskService.CompleteTask(nestedSubtask.ID)
-	if err != nil {
-		t.Fatalf("expected nestedSubtask to be marked completed, but an error occurred: %v", err)
-	}
-
-	err = taskService.CompleteTask(nestedSiblingSubstask.ID)
-	if err != nil {
-		t.Fatalf("expected nestedSiblingSubtask to be marked completed, but an error occurred: %v", err)
-	}
-
-	nestedSubtask, err = taskService.FindTaskByID(nestedSubtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if nestedSubtask.Status != TaskStatusCompleted {
-		t.Fatal("nestedSubtask was not marked completed successfully")
-	}
-
-	nestedSiblingSubstask, err = taskService.FindTaskByID(nestedSiblingSubstask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if nestedSiblingSubstask.Status != TaskStatusCompleted {
-		t.Fatal("nestedSiblingSubtask was not marked completed successfully")
-	}
-
-	subtask, err = taskService.FindTaskByID(subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if subtask.Status != TaskStatusCompleted {
-		t.Fatal("subtask was not marked completed successfully")
-	}
-
-	task, err = taskService.FindTaskByID(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
+	task, err = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 }
 
-func TestUpdateTaskStatus_CompleteTaskIsAlreadyCompleted(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *UpdateTaskStatusTestSuite) TestCompleteTaskIsAlreadyCompleted() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
+
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
 
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
-	}
-
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 }
 
-func TestUpdateTaskStatus_Pending(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *UpdateTaskStatusTestSuite) TestPending() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
+
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = suite.taskService.MarkTaskAsPending(task.ID)
+	require.NoError(t, err)
 
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
-	}
-
-	err = taskService.MarkTaskAsPending(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusPending {
-		t.Fatal("task was not marked as pending successfully")
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusPending,
+			task.Status,
+			"task was not marked as pending successfully",
+		)
 	}
 }
 
-func TestUpdateTaskStatus_PendingDoesNotMarkSubtasksAsPending(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *UpdateTaskStatusTestSuite) TestPendingDoesNotMarkSubtasksAsPending() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	subtask, err := suite.taskService.CreateTask("Subtask", suite.projectID, &task.ID)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
+
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
+	subtask, err = suite.taskService.FindTaskByID(subtask.ID)
+	require.NoError(t, err)
+
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			subtask.Status,
+			"subtask was not marked completed successfully",
+		)
 	}
 
-	subtask, err := taskService.CreateTask("Subtask", project.ID, &task.ID)
-	if err != nil {
-		t.Fatal(err)
+	err = suite.taskService.MarkTaskAsPending(task.ID)
+	require.NoError(t, err)
+
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusPending,
+			task.Status,
+			"task was not marked as pending successfully",
+		)
 	}
 
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	subtask, err = suite.taskService.FindTaskByID(subtask.ID)
+	require.NoError(t, err)
 
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
-	}
-
-	subtask, err = taskService.FindTaskByID(subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if subtask.Status != TaskStatusCompleted {
-		t.Fatal("subtask was not completed successfully")
-	}
-
-	err = taskService.MarkTaskAsPending(task.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusPending {
-		t.Fatal("task was not marked as pending successfully")
-	}
-
-	subtask, err = taskService.FindTaskByID(subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if subtask.Status != TaskStatusCompleted {
-		t.Fatal("subtask was accidentally marked as pending")
+	if assert.NoError(t, err) {
+		assert.NotEqual(t,
+			TaskStatusPending,
+			subtask.Status,
+			"subtask was accidentally marked as pending",
+		)
 	}
 }
 
-func TestUpdateTaskStatus_PendingMarksParentAsPending(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *UpdateTaskStatusTestSuite) TestPendingMarksParentAsPending() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	task, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	subtask, err := suite.taskService.CreateTask("Subtask", suite.projectID, &task.ID)
+	require.NoError(t, err)
+
+	nestedSubtask, err := suite.taskService.CreateTask("Nested subtask", suite.projectID, &subtask.ID)
+	require.NoError(t, err)
+
+	err = suite.taskService.CompleteTask(task.ID)
+	require.NoError(t, err)
+
+	task, _ = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			task.Status,
+			"task was not marked completed successfully",
+		)
 	}
 
-	task, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
+	subtask, err = suite.taskService.FindTaskByID(subtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			subtask.Status,
+			"subtask was not marked completed successfully",
+		)
 	}
 
-	subtask, err := taskService.CreateTask("Subtask", project.ID, &task.ID)
-	if err != nil {
-		t.Fatal(err)
+	nestedSubtask, err = suite.taskService.FindTaskByID(nestedSubtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusCompleted,
+			nestedSubtask.Status,
+			"nestedSubtask was not marked completed successfully",
+		)
 	}
 
-	nestedSubtask, err := taskService.CreateTask("Nested subtask", project.ID, &subtask.ID)
-	if err != nil {
-		t.Fatal(err)
+	err = suite.taskService.MarkTaskAsPending(nestedSubtask.ID)
+	require.NoError(t, err)
+
+	nestedSubtask, err = suite.taskService.FindTaskByID(nestedSubtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusPending,
+			nestedSubtask.Status,
+			"nestedSubtask was not marked as pending successfully",
+		)
 	}
 
-	err = taskService.CompleteTask(task.ID)
-	if err != nil {
-		t.Fatal(err)
+	subtask, err = suite.taskService.FindTaskByID(subtask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusPending,
+			subtask.Status,
+			"subtask was not marked as pending successfully",
+		)
 	}
 
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusCompleted {
-		t.Fatal("task was not completed successfully")
+	task, err = suite.taskService.FindTaskByID(task.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			TaskStatusPending,
+			task.Status,
+			"task was not marked as pending successfully",
+		)
 	}
+}
 
-	subtask, err = taskService.FindTaskByID(subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if subtask.Status != TaskStatusCompleted {
-		t.Fatal("subtask was not completed successfully")
-	}
-
-	nestedSubtask, err = taskService.FindTaskByID(nestedSubtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if nestedSubtask.Status != TaskStatusCompleted {
-		t.Fatal("nestedSubtask was not completed successfully")
-	}
-
-	err = taskService.MarkTaskAsPending(nestedSubtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	nestedSubtask, err = taskService.FindTaskByID(nestedSubtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if nestedSubtask.Status != TaskStatusPending {
-		t.Fatal("nestedSubtask was not marked as pending successfully")
-	}
-
-	subtask, err = taskService.FindTaskByID(subtask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if subtask.Status != TaskStatusPending {
-		t.Fatal("subtask was not marked as pending successfully")
-	}
-
-	task, _ = taskService.FindTaskByID(task.ID)
-	if task.Status != TaskStatusPending {
-		t.Fatal("task was not marked as pending successfully")
-	}
+func TestUpdateTaskStatus(t *testing.T) {
+	suite.Run(t, new(UpdateTaskStatusTestSuite))
 }

@@ -1,101 +1,139 @@
 package task
 
 import (
+	"context"
+	"log"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/murasakiwano/todoctian/server/project"
+	"github.com/murasakiwano/todoctian/server/testhelpers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestReorderTask_KeepOrder(t *testing.T) {
-	taskService, projectService := setupServices()
+type ReorderTaskTestSuite struct {
+	suite.Suite
+	ctx         context.Context
+	pgContainer *testhelpers.PostgresContainer
+	taskService *TaskService
+	projectID   uuid.UUID
+}
 
-	project, err := projectService.CreateProject("Test Project")
+func (suite *ReorderTaskTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+	pgContainer, err := testhelpers.CreatePostgresContainer(suite.ctx)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	firstTask, err := taskService.CreateTask("First task", project.ID, nil)
+	suite.pgContainer = pgContainer
+	repository, err := NewTaskRepositoryPostgres(suite.ctx, suite.pgContainer.ConnectionString)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	_, err = taskService.CreateTask("Second task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	projectRepository, err := project.NewProjectRepositoryPostgres(suite.ctx,
+		suite.pgContainer.ConnectionString,
+	)
 
-	err = taskService.ReorderTask(firstTask, 0)
-	if err != nil {
-		t.Fatalf("failed to reorder task with the same order it had: %v", err)
-	}
+	suite.taskService = NewTaskService(repository, projectRepository)
+}
 
-	firstTask, err = taskService.taskDB.Get(firstTask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+// Setup database before each test
+func (suite *ReorderTaskTestSuite) SetupTest() {
+	t := suite.T()
+	t.Log("cleaning up database before test...")
+	testhelpers.CleanupTasksTable(suite.ctx, t, suite.pgContainer.ConnectionString)
+	testhelpers.CleanupProjectsTable(suite.ctx, t, suite.pgContainer.ConnectionString)
 
-	if firstTask.Order != 0 {
-		t.Fatalf("task should not have changed order, but it was moved to %d", firstTask.Order)
+	projectIDs := insertTestProjectsInTheDatabase(suite.ctx, t, suite.pgContainer.ConnectionString)
+	suite.projectID = projectIDs[0]
+}
+
+func (suite *ReorderTaskTestSuite) TestKeepOrder() {
+	t := suite.T()
+
+	firstTask, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	_, err = suite.taskService.CreateTask("Second task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	err = suite.taskService.ReorderTask(firstTask, 0)
+	require.NoError(t, err, "failed to reorder task with the same order it had: %s", err)
+
+	firstTask, err = suite.taskService.taskDB.Get(firstTask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			0,
+			firstTask.Order,
+			"task should not have changed order, but it was moved to %d",
+			firstTask.Order,
+		)
 	}
 }
 
-func TestReorderTask_IncreaseOrder(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *ReorderTaskTestSuite) TestIncreaseOrder() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
-	}
+	firstTask, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
 
-	firstTask, err := taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, err = suite.taskService.CreateTask("Second task", suite.projectID, nil)
+	require.NoError(t, err)
 
-	_, err = taskService.CreateTask("Second task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = suite.taskService.ReorderTask(firstTask, 1)
+	require.NoError(t, err)
 
-	err = taskService.ReorderTask(firstTask, 1)
-	if err != nil {
-		t.Fatalf("failed to increase task's order: %v", err)
-	}
-
-	firstTask, err = taskService.taskDB.Get(firstTask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if firstTask.Order != 1 {
-		t.Fatalf("task should have increased order to 1, but it was %d", firstTask.Order)
+	firstTask, err = suite.taskService.taskDB.Get(firstTask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			1,
+			firstTask.Order,
+			"task should have increased order to 1, but it was %d",
+			firstTask.Order,
+		)
 	}
 }
 
-func TestReorderTask_DecreaseOrder(t *testing.T) {
-	taskService, projectService := setupServices()
+func (suite *ReorderTaskTestSuite) TestDecreaseOrder() {
+	t := suite.T()
 
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
+	_, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	secondTask, err := suite.taskService.CreateTask("Second task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	err = suite.taskService.ReorderTask(secondTask, 0)
+	require.NoError(t, err)
+
+	secondTask, err = suite.taskService.taskDB.Get(secondTask.ID)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			0,
+			secondTask.Order,
+			"task should have decreased order to 0, but it was %d",
+			secondTask.Order,
+		)
 	}
+}
 
-	_, err = taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+func (suite *ReorderTaskTestSuite) TestOrderOutOfBounds() {
+	t := suite.T()
 
-	secondTask, err := taskService.CreateTask("Second task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, err := suite.taskService.CreateTask("First task", suite.projectID, nil)
+	require.NoError(t, err)
 
-	err = taskService.ReorderTask(secondTask, 0)
-	if err != nil {
-		t.Fatalf("failed to increase task's order: %v", err)
-	}
+	secondTask, err := suite.taskService.CreateTask("Second task", suite.projectID, nil)
+	require.NoError(t, err)
 
-	secondTask, err = taskService.taskDB.Get(secondTask.ID)
+	err = suite.taskService.ReorderTask(secondTask, -10)
+	require.NoError(t, err)
+
+	secondTask, err = suite.taskService.taskDB.Get(secondTask.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,47 +141,23 @@ func TestReorderTask_DecreaseOrder(t *testing.T) {
 	if secondTask.Order != 0 {
 		t.Fatalf("task should have decreased order to 0, but it was %d", secondTask.Order)
 	}
-}
 
-func TestReorderTask_OrderOutOfBounds(t *testing.T) {
-	taskService, projectService := setupServices()
-
-	project, err := projectService.CreateProject("Test Project")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = taskService.CreateTask("First task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	secondTask, err := taskService.CreateTask("Second task", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = taskService.ReorderTask(secondTask, -10)
-	if err != nil {
-		t.Fatalf("failed to increase task's order: %v", err)
-	}
-
-	secondTask, err = taskService.taskDB.Get(secondTask.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if secondTask.Order != 0 {
-		t.Fatalf("task should have decreased order to 0, but it was %d", secondTask.Order)
+	if assert.NoError(t, err) {
+		assert.Equal(t,
+			0,
+			secondTask.Order,
+			"task should have decreased order to 0, but it was %d",
+			secondTask.Order,
+		)
 	}
 }
 
-func TestReorderTask_TaskDoesNotExist(t *testing.T) {
-	taskService, _ := setupServices()
-
+func (suite *ReorderTaskTestSuite) TestTaskDoesNotExist() {
 	task := NewTask("Test task", uuid.New(), nil)
-	err := taskService.ReorderTask(task, 0)
-	if err == nil {
-		t.Fatal("expected task reorder to fail, but it succeeded")
-	}
+	err := suite.taskService.ReorderTask(task, 0)
+	require.Error(suite.T(), err)
+}
+
+func TestReorderTask(t *testing.T) {
+	suite.Run(t, new(ReorderTaskTestSuite))
 }

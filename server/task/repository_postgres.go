@@ -9,9 +9,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/murasakiwano/todoctian/server/db"
 	"github.com/murasakiwano/todoctian/server/internal"
 )
+
+// This code indicates that a duplicate constraint was violated by the query
+var ErrPgDuplicate = "23505"
 
 type TaskRepositoryPostgres struct {
 	Queries *db.Queries
@@ -54,6 +58,11 @@ func (t *TaskRepositoryPostgres) Create(task Task) error {
 	})
 	if err != nil {
 		t.logger.Info("failed to create task", slog.Any("task", task), slog.String("err", err.Error()))
+
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == ErrPgDuplicate {
+			err = internal.NewAlreadyExistsError(fmt.Sprintf("Task \"%s\"", task.ID))
+		}
+
 		return err
 	}
 
@@ -70,7 +79,14 @@ func (t *TaskRepositoryPostgres) Get(id uuid.UUID) (Task, error) {
 
 	taskDB, err := t.Queries.GetTask(t.ctx, pgUUID)
 	if err != nil {
-		t.logger.Error("failed to retrieve task from database", slog.String("taskID", id.String()), slog.String("err", err.Error()))
+		t.logger.Error("failed to retrieve task from database",
+			slog.String("taskID", id.String()),
+			slog.String("err", err.Error()),
+		)
+
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = internal.NewNotFoundError(fmt.Sprintf("Task %s", id))
+		}
 		return Task{}, err
 	}
 

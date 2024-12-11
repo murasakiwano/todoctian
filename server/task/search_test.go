@@ -1,43 +1,86 @@
 package task
 
 import (
+	"context"
+	"log"
 	"slices"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/murasakiwano/todoctian/server/project"
+	"github.com/murasakiwano/todoctian/server/testhelpers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestSearchTask_AcrossAllProjects(t *testing.T) {
-	taskService, projectService := setupServices()
+type SearchTaskTestSuite struct {
+	suite.Suite
+	ctx         context.Context
+	pgContainer *testhelpers.PostgresContainer
+	taskService *TaskService
+	projectID   uuid.UUID
+}
 
-	project, err := projectService.CreateProject("Test project")
+func (suite *SearchTaskTestSuite) SetupSuite() {
+	suite.ctx = context.Background()
+	pgContainer, err := testhelpers.CreatePostgresContainer(suite.ctx)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	firstTask, err := taskService.CreateTask("Test task", project.ID, nil)
+	suite.pgContainer = pgContainer
+	repository, err := NewTaskRepositoryPostgres(suite.ctx, suite.pgContainer.ConnectionString)
 	if err != nil {
-		t.Fatal(err)
+		log.Fatal(err)
 	}
 
-	secondTask, err := taskService.CreateTask("Test task for second project", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	projectRepository, err := project.NewProjectRepositoryPostgres(suite.ctx,
+		suite.pgContainer.ConnectionString,
+	)
 
-	_, err = taskService.CreateTask("unmatching", project.ID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	suite.taskService = NewTaskService(repository, projectRepository)
+}
 
-	tasks, err := taskService.SearchTaskName("tsk", project.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+// Setup database before each test
+func (suite *SearchTaskTestSuite) SetupTest() {
+	t := suite.T()
+	t.Log("cleaning up database before test...")
+	testhelpers.CleanupTasksTable(suite.ctx, t, suite.pgContainer.ConnectionString)
+	testhelpers.CleanupProjectsTable(suite.ctx, t, suite.pgContainer.ConnectionString)
 
-	if !(slices.ContainsFunc(tasks, func(t Task) bool {
-		return t.Name == firstTask.Name
-	}) && slices.ContainsFunc(tasks, func(t Task) bool {
-		return t.Name == secondTask.Name
-	}) && len(tasks) == 2) {
-		t.Fatalf("expected slice to contain both tasks that were added: %v", tasks)
+	projectIDs := insertTestProjectsInTheDatabase(suite.ctx, t, suite.pgContainer.ConnectionString)
+	suite.projectID = projectIDs[0]
+}
+
+func (suite *SearchTaskTestSuite) TestAcrossAllProjects() {
+	t := suite.T()
+
+	firstTask, err := suite.taskService.CreateTask("Test task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	secondTask, err := suite.taskService.CreateTask("Test task for second project", suite.projectID, nil)
+	require.NoError(t, err)
+
+	unmatching := "unmatching"
+	_, err = suite.taskService.CreateTask(unmatching, suite.projectID, nil)
+	require.NoError(t, err)
+
+	tasks, err := suite.taskService.SearchTaskName("tsk", suite.projectID)
+	if assert.NoError(t, err) {
+		assert.Len(t, tasks, 2)
+		assert.True(t, slices.ContainsFunc(tasks, func(t Task) bool {
+			return t.Name == firstTask.Name
+		}))
+		assert.True(t, slices.ContainsFunc(tasks, func(t Task) bool {
+			return t.Name == secondTask.Name
+		}))
+		assert.False(t, slices.ContainsFunc(tasks, func(t Task) bool {
+			return t.Name == unmatching
+		}))
 	}
+}
+
+func TestSearchTask(t *testing.T) {
+	suite.Run(t, new(SearchTaskTestSuite))
 }
