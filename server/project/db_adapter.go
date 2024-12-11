@@ -1,14 +1,12 @@
 package project
 
 import (
-	"github.com/google/uuid"
 	"github.com/murasakiwano/todoctian/server/db"
 	"github.com/murasakiwano/todoctian/server/internal"
 )
 
-func AdaptDBProjectToProjectModel(projectDB db.Project) (Project, error) {
-	projectID := internal.EncodeUUID(projectDB.ID.Bytes)
-	id, err := uuid.Parse(projectID)
+func ProjectDBToProjectModel(projectDB db.Project) (Project, error) {
+	projectID, err := internal.EncodeUUID(projectDB.ID.Bytes)
 	if err != nil {
 		return Project{}, err
 	}
@@ -16,7 +14,7 @@ func AdaptDBProjectToProjectModel(projectDB db.Project) (Project, error) {
 	createdAt := projectDB.CreatedAt.Time
 
 	return Project{
-		ID:        id,
+		ID:        projectID,
 		CreatedAt: createdAt,
 		Name:      projectDB.Name,
 	}, nil

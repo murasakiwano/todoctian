@@ -77,7 +77,7 @@ func (ts *TaskService) ReorderTask(task Task, newOrder int) error {
 	slices.SortFunc(siblings, cmpTasks)
 	ts.logger.Debug("Siblings are now like this", slog.Any("siblings", siblings))
 
-	ts.taskDB.BatchUpdate(siblings)
+	ts.taskDB.BatchUpdateOrder(siblings)
 	return nil
 }
 

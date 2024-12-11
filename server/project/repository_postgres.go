@@ -35,7 +35,7 @@ func NewProjectRepositoryPostgres(ctx context.Context, connString string) (*Proj
 }
 
 func (p *ProjectRepositoryPostgres) Create(project Project) error {
-	pgUUID, err := p.scanUUID(project.ID)
+	pgUUID, err := internal.ScanUUID(project.ID)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (p *ProjectRepositoryPostgres) Create(project Project) error {
 }
 
 func (p *ProjectRepositoryPostgres) Get(id uuid.UUID) (Project, error) {
-	pgUUID, err := p.scanUUID(id)
+	pgUUID, err := internal.ScanUUID(id)
 	if err != nil {
 		p.logger.Error("failed to scan id to a postgres uuid", slog.String("err", err.Error()))
 		return Project{}, err
@@ -77,7 +77,7 @@ func (p *ProjectRepositoryPostgres) Get(id uuid.UUID) (Project, error) {
 
 	p.logger.Info("retrieved project from database", slog.Any("project", projectDB))
 
-	return AdaptDBProjectToProjectModel(projectDB)
+	return ProjectDBToProjectModel(projectDB)
 }
 
 func (p *ProjectRepositoryPostgres) GetByName(name string) (Project, error) {
@@ -95,14 +95,16 @@ func (p *ProjectRepositoryPostgres) GetByName(name string) (Project, error) {
 		return Project{}, err
 	}
 
+	project, err := ProjectDBToProjectModel(projectDB)
 	p.logger.Info("retrieved project from the database",
 		slog.Group("project",
-			slog.String("id", internal.EncodeUUID(projectDB.ID.Bytes)),
+			slog.String("id", project.ID.String()),
 			slog.String("name", projectDB.Name),
 			slog.Time("created_at", projectDB.CreatedAt.Time),
 		),
 	)
-	return AdaptDBProjectToProjectModel(projectDB)
+
+	return project, err
 }
 
 func (prepo *ProjectRepositoryPostgres) ListProjects() ([]Project, error) {
@@ -115,7 +117,7 @@ func (prepo *ProjectRepositoryPostgres) ListProjects() ([]Project, error) {
 
 	projects := []Project{}
 	for _, pDB := range projectsDB {
-		p, err := AdaptDBProjectToProjectModel(pDB)
+		p, err := ProjectDBToProjectModel(pDB)
 		if err != nil {
 			prepo.logger.Error("could not adapt DB project to the project model", slog.String("err", err.Error()))
 			return nil, err
@@ -128,7 +130,7 @@ func (prepo *ProjectRepositoryPostgres) ListProjects() ([]Project, error) {
 }
 
 func (p *ProjectRepositoryPostgres) Rename(id uuid.UUID, newName string) error {
-	pgUUID, err := p.scanUUID(id)
+	pgUUID, err := internal.ScanUUID(id)
 	if err != nil {
 		return err
 	}
@@ -140,7 +142,7 @@ func (p *ProjectRepositoryPostgres) Rename(id uuid.UUID, newName string) error {
 }
 
 func (p *ProjectRepositoryPostgres) Delete(id uuid.UUID) (Project, error) {
-	pgUUID, err := p.scanUUID(id)
+	pgUUID, err := internal.ScanUUID(id)
 	if err != nil {
 		return Project{}, err
 	}
@@ -150,19 +152,5 @@ func (p *ProjectRepositoryPostgres) Delete(id uuid.UUID) (Project, error) {
 		return Project{}, err
 	}
 
-	return AdaptDBProjectToProjectModel(project)
-}
-
-func (p *ProjectRepositoryPostgres) scanUUID(id uuid.UUID) (pgtype.UUID, error) {
-	pgUUID := pgtype.UUID{}
-	err := pgUUID.Scan(id.String())
-	if err != nil {
-		p.logger.Error("could not scan project's uuid",
-			slog.String("uuid", id.String()),
-			slog.String("err", err.Error()),
-		)
-		return pgtype.UUID{}, err
-	}
-
-	return pgUUID, nil
+	return ProjectDBToProjectModel(project)
 }

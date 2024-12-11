@@ -75,7 +75,7 @@ func (ts *TaskService) rearrangeTaskSiblings(task Task) error {
 	}
 
 	_ = slices.Delete(siblings, task.Order, task.Order+1)
-	_, err = ts.taskDB.BatchUpdate(siblings[:len(siblings)-1])
+	err = ts.taskDB.BatchUpdateOrder(siblings[:len(siblings)-1])
 	if err != nil {
 		return fmt.Errorf("Failed to update siblings of task %s: %w", task.ID, err)
 	}

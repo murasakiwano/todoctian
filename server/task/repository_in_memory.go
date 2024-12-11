@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/murasakiwano/todoctian/server/internal"
@@ -48,36 +47,35 @@ func (tr *TaskRepositoryInMemory) Rename(taskID uuid.UUID, newName string) error
 	}
 
 	task.Name = newName
-
-	return tr.Update(task)
-}
-
-// Update reads a task from the map, then updates its information. For simplicity, it overwrites
-// all the task info.
-func (tr *TaskRepositoryInMemory) Update(task Task) error {
-	_, exists := tr.tasks[task.ID]
-	if !exists {
-		return internal.NewNotFoundError(fmt.Sprintf("Task with ID %s", task.ID))
-	}
-
-	task.UpdatedAt = time.Now()
 	tr.tasks[task.ID] = task
 
 	return nil
 }
 
-// BatchUpdate updates a collection of tasks in batch.
-func (tr *TaskRepositoryInMemory) BatchUpdate(tasks []Task) (int, error) {
-	n := len(tasks)
+// UpdateOrder reads a task from the map, then updates its information. For simplicity, it overwrites
+// all the task info.
+func (tr *TaskRepositoryInMemory) UpdateOrder(taskID uuid.UUID, newTaskOrder int) error {
+	task, exists := tr.tasks[taskID]
+	if !exists {
+		return internal.NewNotFoundError(fmt.Sprintf("Task with ID %s", task.ID))
+	}
 
+	task.Order = newTaskOrder
+	tr.tasks[task.ID] = task
+
+	return nil
+}
+
+// BatchUpdateOrder updates a collection of tasks in batch.
+func (tr *TaskRepositoryInMemory) BatchUpdateOrder(tasks []Task) error {
 	for _, task := range tasks {
-		err := tr.Update(task)
+		err := tr.UpdateOrder(task.ID, task.Order)
 		if err != nil {
-			return 0, err
+			return err
 		}
 	}
 
-	return n, nil
+	return nil
 }
 
 // Read a specific task by its ID in the map.
@@ -110,10 +108,8 @@ func (tr *TaskRepositoryInMemory) UpdateTaskStatus(id uuid.UUID, newStatus TaskS
 	}
 
 	task.Status = newStatus
-	err := tr.Update(task)
-	if err != nil {
-		return fmt.Errorf("Failed to update task status: %w", err)
-	}
+
+	tr.tasks[id] = task
 
 	return nil
 }
@@ -181,7 +177,7 @@ func (r *TaskRepositoryInMemory) GetSubtasksDeep(taskID uuid.UUID) ([]Task, erro
 }
 
 // Filter tasks by project.
-func (tr *TaskRepositoryInMemory) GetTasksByProject(projectID uuid.UUID) []Task {
+func (tr *TaskRepositoryInMemory) GetTasksByProject(projectID uuid.UUID) ([]Task, error) {
 	projectTasks := []Task{}
 
 	for _, task := range tr.tasks {
@@ -190,12 +186,15 @@ func (tr *TaskRepositoryInMemory) GetTasksByProject(projectID uuid.UUID) []Task 
 		}
 	}
 
-	return projectTasks
+	return projectTasks, nil
 }
 
 // Filter tasks in a project by status.
-func (tr *TaskRepositoryInMemory) GetTasksByStatus(projectID uuid.UUID, status TaskStatus) []Task {
-	projectTasks := tr.GetTasksByProject(projectID)
+func (tr *TaskRepositoryInMemory) GetTasksByStatus(projectID uuid.UUID, status TaskStatus) ([]Task, error) {
+	projectTasks, err := tr.GetTasksByProject(projectID)
+	if err != nil {
+		return nil, err
+	}
 
 	tasks := []Task{}
 	for _, t := range projectTasks {
@@ -204,12 +203,15 @@ func (tr *TaskRepositoryInMemory) GetTasksByStatus(projectID uuid.UUID, status T
 		}
 	}
 
-	return tasks
+	return tasks, nil
 }
 
 // Get all tasks that are in the project root, i.e., that have no parent task.
-func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []Task {
-	projectTasks := tr.GetTasksByProject(projectID)
+func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) ([]Task, error) {
+	projectTasks, err := tr.GetTasksByProject(projectID)
+	if err != nil {
+		return nil, err
+	}
 
 	root := []Task{}
 	for _, task := range projectTasks {
@@ -218,5 +220,5 @@ func (tr *TaskRepositoryInMemory) GetTasksInProjectRoot(projectID uuid.UUID) []T
 		}
 	}
 
-	return root
+	return root, nil
 }

@@ -35,6 +35,7 @@ func (suite *ProjectRepoPostgresTestSuite) SetupSuite() {
 	suite.repository = repository
 }
 
+// Cleanup database before each test
 func (suite *ProjectRepoPostgresTestSuite) SetupTest() {
 	t := suite.T()
 	t.Log("Cleaning up database before test...")
@@ -42,7 +43,10 @@ func (suite *ProjectRepoPostgresTestSuite) SetupTest() {
 	if err != nil {
 		t.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	conn.Query(suite.ctx, "DELETE FROM projects;") // Cleanup everything before each test
+	_, err = conn.Query(suite.ctx, "DELETE FROM projects;") // Cleanup everything before each test
+	if err != nil {
+		t.Fatalf("Failed to cleanup database: %v\n", err)
+	}
 	conn.Close(suite.ctx)
 }
 

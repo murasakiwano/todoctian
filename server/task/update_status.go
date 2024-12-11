@@ -21,7 +21,7 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 	}
 
 	task.Status = TaskStatusPending
-	err = ts.taskDB.Update(task)
+	err = ts.taskDB.UpdateTaskStatus(task.ID, TaskStatusPending)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (ts *TaskService) CompleteTask(id uuid.UUID) error {
 func (ts *TaskService) markTaskAsCompleted(task Task) error {
 	task.Status = TaskStatusCompleted
 	ts.logger.Debug("marked task as completed", slog.String("taskID", task.ID.String()))
-	err := ts.taskDB.Update(task)
+	err := ts.taskDB.UpdateTaskStatus(task.ID, TaskStatusCompleted)
 	if err != nil {
 		return err
 	}

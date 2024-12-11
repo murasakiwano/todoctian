@@ -18,22 +18,22 @@ type TaskRepository interface {
 	GetSubtasksDeep(id uuid.UUID) ([]Task, error)
 
 	// Retrieve all tasks in a specific project
-	GetTasksByProject(projectID uuid.UUID) []Task
+	GetTasksByProject(projectID uuid.UUID) ([]Task, error)
 
 	// Retrieve all tasks in a project
-	GetTasksInProjectRoot(projectID uuid.UUID) []Task
+	GetTasksInProjectRoot(projectID uuid.UUID) ([]Task, error)
 
 	// Filter tasks in a project by their status
-	GetTasksByStatus(projectID uuid.UUID, status TaskStatus) []Task
+	GetTasksByStatus(projectID uuid.UUID, status TaskStatus) ([]Task, error)
 
 	// Rename a single task
 	Rename(taskID uuid.UUID, newName string) error
 
-	// Update a single task
-	Update(task Task) error
+	// Update a single task's order
+	UpdateOrder(taskID uuid.UUID, newTaskOrder int) error
 
-	// Batch update a collection of tasks
-	BatchUpdate(tasks []Task) (int, error)
+	// Batch update the order a collection of tasks
+	BatchUpdateOrder(tasks []Task) error
 
 	// Update task status to Pending or Completed
 	UpdateTaskStatus(id uuid.UUID, newStatus TaskStatus) error

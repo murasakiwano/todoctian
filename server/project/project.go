@@ -1,6 +1,7 @@
 package project
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,4 +25,13 @@ func NewProject(name string) Project {
 		Tasks:     []uuid.UUID{},
 		CreatedAt: now,
 	}
+}
+
+// Will not log tasks in order to save log space.
+func (p Project) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("ID", p.ID.String()),
+		slog.String("Name", p.Name),
+		slog.Time("CreatedAt", p.CreatedAt),
+	)
 }

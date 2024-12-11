@@ -59,7 +59,11 @@ func (ts TaskService) ValidateTask(task Task) error {
 func (ts TaskService) FetchTaskSiblings(task Task) ([]Task, error) {
 	siblings := []Task{}
 	if task.IsInProjectRoot() {
-		siblings = ts.taskDB.GetTasksInProjectRoot(task.ProjectID)
+		taskSiblings, err := ts.taskDB.GetTasksInProjectRoot(task.ProjectID)
+		if err != nil {
+			return nil, err
+		}
+		siblings = taskSiblings
 	} else {
 		s, err := ts.taskDB.GetSubtasksDirect(*task.ParentTaskID)
 		if err != nil {

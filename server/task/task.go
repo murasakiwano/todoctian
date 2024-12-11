@@ -15,8 +15,6 @@ import (
 type Task struct {
 	// Time of task creation
 	CreatedAt time.Time
-	// Las time the task was updated
-	UpdatedAt time.Time
 	// The ID of the parent task
 	ParentTaskID *uuid.UUID
 	// The name of the task
@@ -60,7 +58,6 @@ func NewTask(name string, projectID uuid.UUID, parentTaskID *uuid.UUID) Task {
 		Subtasks:     []Task{},
 		Order:        0, // 0 means the order is unset
 		CreatedAt:    now,
-		UpdatedAt:    now,
 	}
 
 	return task
@@ -82,15 +79,20 @@ const (
 )
 
 func (t Task) LogValue() slog.Value {
+	subtaskIDs := []uuid.UUID{}
+
+	for _, subtask := range t.Subtasks {
+		subtaskIDs = append(subtaskIDs, subtask.ID)
+	}
+
 	return slog.GroupValue(
 		slog.String("ID", t.ID.String()),
 		slog.String("Name", t.Name),
 		slog.String("Status", t.Status.String()),
 		slog.String("ProjectID", t.ProjectID.String()),
 		slog.Time("CreatedAt", t.CreatedAt),
-		slog.Time("UpdatedAt", t.UpdatedAt),
 		slog.Int("Order", t.Order),
-		slog.Any("SubtaskIDs", t.Subtasks),
+		slog.Any("SubtaskIDs", subtaskIDs),
 		slog.Any("ParentTaskID", t.ParentTaskID),
 	)
 }
