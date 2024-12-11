@@ -20,12 +20,12 @@ type ProjectRepositoryPostgres struct {
 	logger  slog.Logger
 }
 
-func NewProjectRepositoryPostgres(ctx context.Context, pool *pgxpool.Pool) (*ProjectRepositoryPostgres, error) {
+func NewProjectRepositoryPostgres(ctx context.Context, pool *pgxpool.Pool) *ProjectRepositoryPostgres {
 	return &ProjectRepositoryPostgres{
 		Queries: db.New(pool),
 		ctx:     ctx,
 		logger:  *internal.NewLogger("ProjectRepositoryPostgres"),
-	}, nil
+	}
 }
 
 func (p *ProjectRepositoryPostgres) Create(project Project) error {

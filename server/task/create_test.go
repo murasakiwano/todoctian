@@ -35,14 +35,8 @@ func (suite *CreateTaskTestSuite) SetupSuite() {
 		log.Fatal(err)
 	}
 
-	repository, err := NewTaskRepositoryPostgres(suite.ctx, pgPool)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	projectRepository, err := project.NewProjectRepositoryPostgres(suite.ctx,
-		pgPool,
-	)
+	repository := NewTaskRepositoryPostgres(suite.ctx, pgPool)
+	projectRepository := project.NewProjectRepositoryPostgres(suite.ctx, pgPool)
 
 	suite.taskService = NewTaskService(repository, projectRepository)
 }

@@ -23,13 +23,13 @@ type TaskRepositoryPostgres struct {
 	logger  slog.Logger
 }
 
-func NewTaskRepositoryPostgres(ctx context.Context, pool *pgxpool.Pool) (*TaskRepositoryPostgres, error) {
+func NewTaskRepositoryPostgres(ctx context.Context, pool *pgxpool.Pool) *TaskRepositoryPostgres {
 	slog.Debug("Connected to the database")
 	return &TaskRepositoryPostgres{
 		Queries: db.New(pool),
 		ctx:     ctx,
 		logger:  *internal.NewLogger("TaskRepositoryPostgres"),
-	}, nil
+	}
 }
 
 func (t *TaskRepositoryPostgres) Create(task Task) error {

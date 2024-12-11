@@ -33,10 +33,7 @@ func (suite *ProjectServiceTestSuite) SetupSuite() {
 		log.Fatal(err)
 	}
 
-	repository, err := NewProjectRepositoryPostgres(suite.ctx, pgPool)
-	if err != nil {
-		log.Fatal(err)
-	}
+	repository := NewProjectRepositoryPostgres(suite.ctx, pgPool)
 
 	suite.service = NewProjectService(repository)
 }
