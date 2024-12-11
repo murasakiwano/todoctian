@@ -30,7 +30,7 @@ func TaskDBToTaskModel(taskDB db.Task) (Task, error) {
 		parentTaskID = &pTaskID
 	}
 
-	// NOTE: the database guarantees that "status" is either "Pending" or "Completed"
+	// NOTE: the database guarantees that "status" is either "pending" or "completed"
 	taskStatus := TaskStatusPending
 	if taskDB.Status == TaskStatusCompleted.String() {
 		taskStatus = TaskStatusCompleted

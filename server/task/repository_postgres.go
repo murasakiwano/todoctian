@@ -30,6 +30,7 @@ func NewTaskRepositoryPostgres(ctx context.Context, connString string) (*TaskRep
 		return nil, err
 	}
 
+	slog.Debug("Connected to the database")
 	return &TaskRepositoryPostgres{
 		Queries: db.New(conn),
 		ctx:     ctx,

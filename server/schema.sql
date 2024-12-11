@@ -32,5 +32,5 @@ CREATE TABLE "public"."tasks" (
   CONSTRAINT "tasks_parent_task_id_fkey" FOREIGN KEY ("parent_task_id") REFERENCES "public"."tasks" ("id") ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT "tasks_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("id") ON UPDATE NO ACTION ON DELETE CASCADE,
   CONSTRAINT "tasks_order_check" CHECK ("order" >= 0),
-  CONSTRAINT "tasks_status_check" CHECK (status = ANY (ARRAY['Pending'::text, 'Completed'::text]))
+  CONSTRAINT "tasks_status_check" CHECK (status = ANY (ARRAY['pending'::text, 'completed'::text]))
 );

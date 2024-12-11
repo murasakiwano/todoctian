@@ -9,7 +9,7 @@ import (
 )
 
 // Task struct    Represents a to-do item. A task is either complete or incomplete, so we
-// represent this with "Pending" and "Completed".
+// represent this with "pending" and "completed".
 //
 // A task may or may not have a parent task and, in turn, a list of subtasks.
 type Task struct {
@@ -66,7 +66,7 @@ func (t Task) IsInProjectRoot() bool {
 type TaskStatus int
 
 func (t TaskStatus) String() string {
-	return [...]string{"Pending", "Completed"}[t]
+	return [...]string{"pending", "completed"}[t]
 }
 
 const (

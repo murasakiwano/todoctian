@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: Todoctian
+  description: A todo list API that manages projects and tasks with subtasks.
+  version: 1.0.0
+paths:
+  /projects:
+    get:
+      summary: Get all projects
+      description: Retrieve a list of all projects.
+      responses:
+        "200":
+          description: List of all projects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      summary: Create a project.
+      description: Add a new project to the todo list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Project"
+      responses:
+        "201":
+          description: Project created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{projectID}:
+    get:
+      summary: Get a single project
+      description: Retrieve a project by its ID.
+      parameters:
+        - name: projectID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the project.
+      responses:
+        "200":
+          description: A single project. # TODO: bring tasks?
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Project not found.
+    patch:
+      summary: Rename a project
+      description: Update an existing project's name.
+      parameters:
+        - name: projectID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: The new name for the project.
+      responses:
+        "200":
+          description: Project updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Project not found.
+        "409":
+          description: Project name is already taken.
+    delete:
+      summary: Delete a project. Also deletes the project's tasks.
+      description: Remove a project and its tasks from the todo list.
+      parameters:
+        - name: projectID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Project deleted successfully.
+        "404":
+          description: Project not found.
+
+  /projects/{projectID}/tasks:
+    get:
+      summary: Get all project's tasks.
+      description: Retrieve a list of all tasks belonging to a certain project.
+      parameters:
+        - name: projectID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of the project's tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+        "404":
+          description: Project not found.
+
+  /tasks:
+    get:
+      summary: Get all tasks
+      description: Retrieve a list of all tasks.
+      responses:
+        "200":
+          description: A list of all tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      summary: Create a new task.
+      description: Add a new task to a project in the todo list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        "201":
+          description: Task created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Project not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{taskID}:
+    get:
+      summary: Get a single task.
+      description: Retrieve a task by its ID.
+      parameters:
+        - name: taskID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the task.
+      responses:
+        "200":
+          description: A single task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found.
+    delete:
+      summary: Delete a task.
+      description: Remove a task from the todo list.
+      parameters:
+        - name: taskID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Task deleted successfully.
+        "404":
+          description: Task not found.
+
+  /tasks/{taskID}/status:
+    patch:
+      summary: Update a task's status.
+      description: Mark a task as completed or as pending.
+      parameters:
+        - name: taskID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, completed]
+      responses:
+        "200":
+          description: Task status updated successfully.
+        "404":
+          description: Task not found.
+
+components:
+  schemas:
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the project.
+        name:
+          type: string
+          description: Name of the project.
+        createdAt:
+          type: string
+          format: date-time
+          description: The creation date of the project.
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the task.
+        projectID:
+          type: string
+          format: uuid
+          description: ID of the project the task belongs to.
+        name:
+          type: string
+          description: Name of the task.
+        status:
+          type: string
+          enum: [pending, completed]
+          description: The current status of the task.
+        parentTaskID:
+          type: string
+          format: uuid
+          description: ID of the parent task, if it exists.
+        subtaskIDs:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: A list of the IDs for the task's subtasks.
+        createdAt:
+          type: string
+          format: date-time
+          description: The creation date of the task.
