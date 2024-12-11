@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/murasakiwano/todoctian/server/project"
 	"github.com/murasakiwano/todoctian/server/testhelpers"
 	"github.com/stretchr/testify/assert"
@@ -29,13 +30,18 @@ func (suite *UpdateTaskStatusTestSuite) SetupSuite() {
 	}
 
 	suite.pgContainer = pgContainer
-	repository, err := NewTaskRepositoryPostgres(suite.ctx, suite.pgContainer.ConnectionString)
+	pgPool, err := pgxpool.New(suite.ctx, suite.pgContainer.ConnectionString)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repository, err := NewTaskRepositoryPostgres(suite.ctx, pgPool)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	projectRepository, err := project.NewProjectRepositoryPostgres(suite.ctx,
-		suite.pgContainer.ConnectionString,
+		pgPool,
 	)
 
 	suite.taskService = NewTaskService(repository, projectRepository)

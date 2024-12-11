@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/murasakiwano/todoctian/server/internal"
 	"github.com/murasakiwano/todoctian/server/project"
 	"github.com/murasakiwano/todoctian/server/testhelpers"
@@ -34,7 +35,12 @@ func (suite *TaskRepoPostgresTestSuite) SetupSuite() {
 	}
 
 	suite.pgContainer = pgContainer
-	repository, err := NewTaskRepositoryPostgres(suite.ctx, suite.pgContainer.ConnectionString)
+	pgPool, err := pgxpool.New(suite.ctx, suite.pgContainer.ConnectionString)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repository, err := NewTaskRepositoryPostgres(suite.ctx, pgPool)
 	if err != nil {
 		log.Fatal(err)
 	}

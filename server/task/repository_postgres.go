@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/murasakiwano/todoctian/server/db"
 	"github.com/murasakiwano/todoctian/server/internal"
 )
@@ -23,16 +23,10 @@ type TaskRepositoryPostgres struct {
 	logger  slog.Logger
 }
 
-func NewTaskRepositoryPostgres(ctx context.Context, connString string) (*TaskRepositoryPostgres, error) {
-	conn, err := pgx.Connect(ctx, connString)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		return nil, err
-	}
-
+func NewTaskRepositoryPostgres(ctx context.Context, pool *pgxpool.Pool) (*TaskRepositoryPostgres, error) {
 	slog.Debug("Connected to the database")
 	return &TaskRepositoryPostgres{
-		Queries: db.New(conn),
+		Queries: db.New(pool),
 		ctx:     ctx,
 		logger:  *internal.NewLogger("TaskRepositoryPostgres"),
 	}, nil
