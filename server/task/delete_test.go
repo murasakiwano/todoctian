@@ -128,16 +128,16 @@ func (suite *DeleteTaskTestSuite) TestRearrangesSiblingsOrders() {
 	thirdTask, err = suite.taskService.FindTaskByID(thirdTask.ID)
 	require.NoError(t, err)
 
-	assert.Equal(t,
+	assert.Equalf(t,
 		0,
 		firstTask.Order,
-		"firstTask's order changed when it should not have changed: %v",
+		"firstTask's order changed when it should not have changed: %d",
 		firstTask.Order,
 	)
-	assert.Equal(t,
+	assert.Equalf(t,
 		1,
 		thirdTask.Order,
-		"thirdTasks's order should have decreased to 1, but it's %v",
+		"thirdTasks's order should have decreased to 1, but it's %d",
 		thirdTask.Order,
 	)
 }
@@ -155,7 +155,7 @@ func (suite *DeleteTaskTestSuite) TestKeepsParentTaskTheSame() {
 	require.NoError(t, err)
 
 	_, err = suite.taskService.FindTaskByID(task.ID)
-	assert.NoError(t, err, "Parent task was supposed to remain intact, but an error occurred: %v", err)
+	assert.NoErrorf(t, err, "Parent task was supposed to remain intact, but an error occurred: %v", err)
 }
 
 func TestDeleteTask(t *testing.T) {

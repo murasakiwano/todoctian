@@ -102,7 +102,7 @@ func (suite *HandlerTestSuite) SetupSuite() {
 	suite.projectService = project.NewProjectService(suite.projectRepository)
 	suite.taskService = task.NewTaskService(suite.taskRepository, suite.projectRepository)
 
-	suite.handler = Handler(suite.taskService, suite.projectService)
+	suite.handler = Handler(connStr)
 
 	r := chi.NewRouter()
 	r.Mount("/", suite.handler)
@@ -204,7 +204,7 @@ func (suite *HandlerTestSuite) TestPostProject_FailsIfDuplicate() {
 	t := suite.T()
 
 	projectName := "test project"
-	body := openapi.PostTasksJSONRequestBody{
+	body := openapi.PostProjectsJSONRequestBody{
 		Name: &projectName,
 	}
 	buff := bodyInBytes(t, body)
@@ -425,7 +425,7 @@ func (suite *HandlerTestSuite) TestPostTasks_CreatesATask() {
 	projectIDs := suite.insertTestProjectsInTheDatabase()
 	projectID := projectIDs[0].String()
 	taskName := "test task"
-	body := openapi.PostTasksJSONBody{
+	body := openapi.PostTasksJSONRequestBody{
 		Name:      &taskName,
 		ProjectID: &projectID,
 	}

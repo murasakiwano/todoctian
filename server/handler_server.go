@@ -1,13 +1,16 @@
 package todoctian
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/murasakiwano/todoctian/server/internal"
 	"github.com/murasakiwano/todoctian/server/internal/openapi"
 	"github.com/murasakiwano/todoctian/server/project"
@@ -20,7 +23,19 @@ type Server struct {
 	logger         slog.Logger
 }
 
-func NewServer(taskService *task.TaskService, projectService *project.ProjectService) *Server {
+func NewServer(connString string) *Server {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, connString)
+	if err != nil {
+		log.Fatalf("could not connect to PostgreSQL: %s", err)
+	}
+
+	projectRepository := project.NewProjectRepositoryPostgres(ctx, pool)
+	taskRepository := task.NewTaskRepositoryPostgres(ctx, pool)
+
+	projectService := project.NewProjectService(projectRepository)
+	taskService := task.NewTaskService(taskRepository, projectRepository)
+
 	return &Server{
 		TaskService:    taskService,
 		ProjectService: projectService,
@@ -76,10 +91,11 @@ func (s *Server) PostProjects(w http.ResponseWriter, r *http.Request) (_ *openap
 		return
 	}
 
-	project, err := s.ProjectService.CreateProject(*body.Name)
+	projectName := *body.Name
+	project, err := s.ProjectService.CreateProject(projectName)
 	if err != nil {
 		if errors.Is(err, internal.ErrAlreadyExists) {
-			http.Error(w, fmt.Sprintf("project \"%v\" already exists", body.Name), http.StatusConflict)
+			http.Error(w, fmt.Sprintf("project \"%s\" already exists", projectName), http.StatusConflict)
 			return
 		}
 
@@ -461,7 +477,7 @@ func taskModelToTaskOAPI(taskModel task.Task) (openapi.Task, error) {
 }
 
 func internalServerError(w http.ResponseWriter) {
-	http.Error(w, "internalServerError", http.StatusInternalServerError)
+	http.Error(w, "internal server error", http.StatusInternalServerError)
 }
 
 func (s *Server) buildSubtasksStructure(taskUUID uuid.UUID) ([]task.Task, error) {
