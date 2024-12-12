@@ -3,6 +3,7 @@ package project
 import (
 	"context"
 	"log"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/murasakiwano/todoctian/server/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -133,6 +135,26 @@ func (suite *ProjectServiceTestSuite) TestRenameProject_NoOpForSameName() {
 	// Renaming to the same name should succeed and be a NOOP
 	err := suite.service.RenameProject(project.ID, name)
 	assert.NoError(t, err)
+}
+
+func (suite *ProjectServiceTestSuite) TestListProjects() {
+	t := suite.T()
+	firstProject, err := suite.service.CreateProject("test project")
+	require.NoError(t, err)
+
+	secondProject, err := suite.service.CreateProject("second test project")
+	require.NoError(t, err)
+
+	projectList, err := suite.service.ListProjects()
+	if assert.NoError(t, err) {
+		assert.Len(t, projectList, 2)
+		assert.True(t, slices.ContainsFunc(projectList, func(p Project) bool {
+			return p.ID == firstProject.ID
+		}))
+		assert.True(t, slices.ContainsFunc(projectList, func(p Project) bool {
+			return p.ID == secondProject.ID
+		}))
+	}
 }
 
 func TestProjectService(t *testing.T) {

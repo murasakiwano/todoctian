@@ -77,3 +77,7 @@ func (p *ProjectService) RenameProject(id uuid.UUID, newName string) error {
 
 	return p.repository.Rename(project.ID, newName)
 }
+
+func (p *ProjectService) ListProjects() ([]Project, error) {
+	return p.repository.ListProjects()
+}
