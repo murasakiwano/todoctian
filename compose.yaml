@@ -1,12 +1,10 @@
 services:
-  client:
-    build: ./client
   server:
     build: ./server
     environment:
       PG_DB_URL: "postgres://gohan:todolist@db:5432/todoctian?sslmode=disable"
     ports:
-      - "8080:8080"
+      - "5656:5656"
     depends_on:
       - db
   db:
