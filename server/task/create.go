@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 )
@@ -12,6 +13,7 @@ func (t *TaskService) CreateTask(taskName string, projectID uuid.UUID, parentTas
 	task := NewTask(taskName, projectID, parentTaskID)
 	err := t.ValidateTask(task)
 	if err != nil {
+		t.logger.Error("could not validate task", slog.Any("err", err))
 		return Task{}, fmt.Errorf("Could not create task \"%s\": %w", taskName, err)
 	}
 

@@ -1,10 +1,8 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/murasakiwano/todoctian/server/internal"
@@ -21,9 +19,7 @@ func NewTaskService(taskRepository TaskRepository, projectRepository project.Pro
 	return &TaskService{
 		repository: taskRepository,
 		projectDB:  projectRepository,
-		logger: *slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
-		})),
+		logger:     *internal.NewLogger("TaskService"),
 	}
 }
 
@@ -34,10 +30,6 @@ func (ts TaskService) ValidateTask(task Task) error {
 	// Check if the project exists
 	_, err := ts.projectDB.Get(task.ProjectID)
 	if err != nil {
-		if errors.Is(err, internal.ErrNotFound) {
-			return fmt.Errorf("Task %s is invalid: the project %s does not exist", task.ID, task.ProjectID)
-		}
-
 		return fmt.Errorf("Failed to fetch project %s from repository: %w", task.ProjectID, err)
 	}
 	// Check if the task parent is valid
@@ -78,4 +70,16 @@ func (ts TaskService) FetchTaskSiblings(task Task) ([]Task, error) {
 
 func (ts TaskService) FindTaskByID(taskID uuid.UUID) (Task, error) {
 	return ts.repository.Get(taskID)
+}
+
+func (ts TaskService) ListTasks() ([]Task, error) {
+	return ts.repository.List()
+}
+
+func (ts TaskService) FetchSubtasksDirect(taskID uuid.UUID) ([]Task, error) {
+	return ts.repository.GetSubtasksDirect(taskID)
+}
+
+func (ts TaskService) FetchSubtasksDeep(taskID uuid.UUID) ([]Task, error) {
+	return ts.repository.GetSubtasksDeep(taskID)
 }

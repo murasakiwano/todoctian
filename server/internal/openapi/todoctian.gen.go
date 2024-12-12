@@ -61,10 +61,8 @@ type Task struct {
 	ProjectID *string `json:"projectID,omitempty"`
 
 	// The current status of the task.
-	Status *TaskStatus `json:"status,omitempty"`
-
-	// A list of the IDs for the task's subtasks.
-	SubtaskIDS []string `json:"subtaskIDs,omitempty"`
+	Status   *TaskStatus `json:"status,omitempty"`
+	Subtasks []Task      `json:"subtasks,omitempty"`
 }
 
 // The current status of the task.
@@ -75,9 +73,11 @@ type TaskStatus struct {
 func (t *TaskStatus) ToValue() string {
 	return t.value
 }
+
 func (t TaskStatus) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.value)
 }
+
 func (t *TaskStatus) UnmarshalJSON(data []byte) error {
 	var value string
 	if err := json.Unmarshal(data, &value); err != nil {
@@ -85,6 +85,7 @@ func (t *TaskStatus) UnmarshalJSON(data []byte) error {
 	}
 	return t.FromValue(value)
 }
+
 func (t *TaskStatus) FromValue(value string) error {
 	switch value {
 
@@ -101,7 +102,10 @@ func (t *TaskStatus) FromValue(value string) error {
 }
 
 // PostProjectsJSONBody defines parameters for PostProjects.
-type PostProjectsJSONBody Project
+type PostProjectsJSONBody struct {
+	// Name of the project.
+	Name *string `json:"name,omitempty"`
+}
 
 // PatchProjectsProjectIDJSONBody defines parameters for PatchProjectsProjectID.
 type PatchProjectsProjectIDJSONBody struct {
@@ -111,6 +115,11 @@ type PatchProjectsProjectIDJSONBody struct {
 
 // PostTasksJSONBody defines parameters for PostTasks.
 type PostTasksJSONBody Task
+
+// GetTasksTaskIDParams defines parameters for GetTasksTaskID.
+type GetTasksTaskIDParams struct {
+	WithSubtasks *bool `json:"withSubtasks,omitempty"`
+}
 
 // PatchTasksTaskIDStatusJSONBody defines parameters for PatchTasksTaskIDStatus.
 type PatchTasksTaskIDStatusJSONBody struct {
@@ -211,6 +220,16 @@ func PostProjectsJSON201Response(body Project) *Response {
 	}
 }
 
+// DeleteProjectsProjectIDJSON204Response is a constructor method for a DeleteProjectsProjectID response.
+// A *Response is returned with the configured status code and content type from the spec.
+func DeleteProjectsProjectIDJSON204Response(body Project) *Response {
+	return &Response{
+		body:        body,
+		Code:        204,
+		contentType: "application/json",
+	}
+}
+
 // GetProjectsProjectIDJSON200Response is a constructor method for a GetProjectsProjectID response.
 // A *Response is returned with the configured status code and content type from the spec.
 func GetProjectsProjectIDJSON200Response(body Project) *Response {
@@ -263,10 +282,20 @@ func PostTasksJSON201Response(body Task) *Response {
 
 // PostTasksJSON404Response is a constructor method for a PostTasks response.
 // A *Response is returned with the configured status code and content type from the spec.
-func PostTasksJSON404Response(body Task) *Response {
+func PostTasksJSON404Response(body Project) *Response {
 	return &Response{
 		body:        body,
 		Code:        404,
+		contentType: "application/json",
+	}
+}
+
+// DeleteTasksTaskIDJSON204Response is a constructor method for a DeleteTasksTaskID response.
+// A *Response is returned with the configured status code and content type from the spec.
+func DeleteTasksTaskIDJSON204Response(body Task) *Response {
+	return &Response{
+		body:        body,
+		Code:        204,
 		contentType: "application/json",
 	}
 }
@@ -312,7 +341,7 @@ type ServerInterface interface {
 	DeleteTasksTaskID(w http.ResponseWriter, r *http.Request, taskID string) *Response
 	// Get a single task.
 	// (GET /tasks/{taskID})
-	GetTasksTaskID(w http.ResponseWriter, r *http.Request, taskID string) *Response
+	GetTasksTaskID(w http.ResponseWriter, r *http.Request, taskID string, params GetTasksTaskIDParams) *Response
 	// Update a task's status.
 	// (PATCH /tasks/{taskID}/status)
 	PatchTasksTaskIDStatus(w http.ResponseWriter, r *http.Request, taskID string) *Response
@@ -328,7 +357,7 @@ type ServerInterfaceWrapper struct {
 func (siw *ServerInterfaceWrapper) GetProjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetProjects(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -346,7 +375,7 @@ func (siw *ServerInterfaceWrapper) GetProjects(w http.ResponseWriter, r *http.Re
 func (siw *ServerInterfaceWrapper) PostProjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PostProjects(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -372,7 +401,7 @@ func (siw *ServerInterfaceWrapper) DeleteProjectsProjectID(w http.ResponseWriter
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.DeleteProjectsProjectID(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -398,7 +427,7 @@ func (siw *ServerInterfaceWrapper) GetProjectsProjectID(w http.ResponseWriter, r
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetProjectsProjectID(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -424,7 +453,7 @@ func (siw *ServerInterfaceWrapper) PatchProjectsProjectID(w http.ResponseWriter,
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PatchProjectsProjectID(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -450,7 +479,7 @@ func (siw *ServerInterfaceWrapper) GetProjectsProjectIDTasks(w http.ResponseWrit
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetProjectsProjectIDTasks(w, r, projectID)
 		if resp != nil {
 			if resp.body != nil {
@@ -468,7 +497,7 @@ func (siw *ServerInterfaceWrapper) GetProjectsProjectIDTasks(w http.ResponseWrit
 func (siw *ServerInterfaceWrapper) GetTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.GetTasks(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -486,7 +515,7 @@ func (siw *ServerInterfaceWrapper) GetTasks(w http.ResponseWriter, r *http.Reque
 func (siw *ServerInterfaceWrapper) PostTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PostTasks(w, r)
 		if resp != nil {
 			if resp.body != nil {
@@ -512,7 +541,7 @@ func (siw *ServerInterfaceWrapper) DeleteTasksTaskID(w http.ResponseWriter, r *h
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.DeleteTasksTaskID(w, r, taskID)
 		if resp != nil {
 			if resp.body != nil {
@@ -538,8 +567,19 @@ func (siw *ServerInterfaceWrapper) GetTasksTaskID(w http.ResponseWriter, r *http
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := siw.Handler.GetTasksTaskID(w, r, taskID)
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTasksTaskIDParams
+
+	// ------------- Optional query parameter "withSubtasks" -------------
+
+	if err := runtime.BindQueryParameter("form", true, false, "withSubtasks", r.URL.Query(), &params.WithSubtasks); err != nil {
+		err = fmt.Errorf("invalid format for parameter withSubtasks: %w", err)
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{err, "withSubtasks"})
+		return
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := siw.Handler.GetTasksTaskID(w, r, taskID, params)
 		if resp != nil {
 			if resp.body != nil {
 				render.Render(w, r, resp)
@@ -564,7 +604,7 @@ func (siw *ServerInterfaceWrapper) PatchTasksTaskIDStatus(w http.ResponseWriter,
 		return
 	}
 
-	var handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := siw.Handler.PatchTasksTaskIDStatus(w, r, taskID)
 		if resp != nil {
 			if resp.body != nil {
@@ -728,26 +768,25 @@ func WithErrorHandler(handler func(w http.ResponseWriter, r *http.Request, err e
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
-
-	"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",
+	"H4sIAAAAAAAC/8xYwW7jNhD9FYItsBfV9nZzqW5uAxQB2iLYpKfFHhhpZHMjkQo5SmoE+veCI1FSLMmW",
+	"Hdu7N9skZ4bz3sw885VHOsu1AoWWh6/cRmvIBH28NfobROg+5kbnYFACLUQGBEK8pKUYbGRkjlIrHvL7",
+	"NTBallqxWCAwnTBcA8srYzMe8ESbTCAPuVv/BWUGPOC4yYGH3KKRasXLgMu4b/1fJZ8KYDIGhTKRYFii",
+	"zaj5opDxkGUlMujb/kdkQ8FunS6bX/QDJacM+L2wj6dJEgr7eK4M9Wwfnx5vqnc0FwYUunzcXPdN3Fw3",
+	"+aV9ZCdgMmESGfwnLdpJAdbo7HFRbWriZQ+QarWyDPUkJxYFFgTkzwYSHvKf5m2hzOsqmbur3lU73Zni",
+	"wbmiUxIhm3Sct5QSxojNOMfumpAG6FQYSmkV9jZQoIqMh194Dip29wuo6FNAiPnXPscdt1Si+56WDHWs",
+	"WSotsuXtDcO1QJYJJVZgfcYtEyomz5a9SFwznxVijMTUubrXsY5QCsUD/gzGVuY/zhazhbutzkGJXPKQ",
+	"f5otZp+4Yxau6epz78Z9WcFAdX0GNBKegYkqUJ0wkaZNeC4MV6dUfTcxD/mfgLfeaMAN2FwrWxXxr4sF",
+	"1bJWCIp8iTxPZUSH59+sc+h75mTUfV/tA18GW3f5a/ACJXEty4TZVOG/WacS0XYgM8s4ZoIpeGmrQ1c8",
+	"8aj2k3Or7dvsPBVg8Xcdbw5KzNveeNoO7H5ycUkDMQ/RFFD2YPx4ULST0OujVS+xuvUzW0QRWJsUabqZ",
+	"OViuFr/1r+1PuaQwaZlIDYh4w1A8gtoG+w8yzUSbILfeFMX8tWmOZeXJFflQjWT6uWOGalaires2MTrb",
+	"R4xrMu2pcdv0ZJoCIgMEY3n45ZVL59DVL/ezpdPBt5ELOijs6dHl1x7KV5dEucrtIMpXO1DWyBJdqHgb",
+	"2SqfHWTZMrW69mK7RfGhhomc7WuBHuCHDeF7c72z/+2AsT9zesPWmb4g2otLoL1kVqpV2rnj0QhTo94y",
+	"V6kmjNYDUi4naShUpY2kWnUI4FI70Kydpe9ekuebEI51bnxRqxyQ/icZFYtLNpGCQH5PEznFVPkMtE20",
+	"rBwbKvNG4B6ivaqpUilwx2PUTLAIDAqpuvjt70v35P57zpgzCMKRvwGjanBsFryjLbX6sWPRkeB4vAcB",
+	"9fj9OEldDkU+nKEqFxPkNf3hJJL78SvVFKHdZue4Hro/H5fVyq3PrT7u8rNDJV9Ux40WRqO1PaTdkpi/",
+	"Ij1zTJPZRIjpqpp4UD+jTOl16Lf+mGJ6Jw0Ok9F0ZL+GrtHaL4+rp6Gd2ngnGLtUsX99OQ9gQc2EpwLM",
+	"prX8InF959+huvbq8w9apyDUmQX1GOKNmm4AOgLlNzp6tC7n7QveiMD+W5hHTwFhWfMkxrRx3+vHshGV",
+	"3WFF/S53yUI9hcQ+/IXzHXp6AN/6qfIwBbybGf4vE2H6wdYu3K6y/D8AAP//LiMOLekYAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
@@ -782,7 +821,7 @@ func decodeSpecCached() func() ([]byte, error) {
 
 // Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
 func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
-	var res = make(map[string]func() ([]byte, error))
+	res := make(map[string]func() ([]byte, error))
 	if len(pathToFile) > 0 {
 		res[pathToFile] = rawSpec
 	}
@@ -796,12 +835,12 @@ func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
 // Externally referenced files must be embedded in the corresponding golang packages.
 // Urls can be supported but this task was out of the scope.
 func GetSwagger() (swagger *openapi3.T, err error) {
-	var resolvePath = PathToRawSpec("")
+	resolvePath := PathToRawSpec("")
 
 	loader := openapi3.NewLoader()
 	loader.IsExternalRefsAllowed = true
 	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
-		var pathToFile = url.String()
+		pathToFile := url.String()
 		pathToFile = path.Clean(pathToFile)
 		getSpec, ok := resolvePath[pathToFile]
 		if !ok {

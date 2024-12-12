@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/murasakiwano/todoctian/server/db"
@@ -48,6 +49,9 @@ func (p *ProjectRepositoryPostgres) Create(project Project) error {
 	})
 	if err != nil {
 		p.logger.Error("failed to insert project in the database", slog.String("err", err.Error()))
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == ErrPgDuplicate {
+			err = internal.NewAlreadyExistsError(fmt.Sprintf("Project \"%s\"", project.ID))
+		}
 	}
 	return err
 }
@@ -69,8 +73,6 @@ func (p *ProjectRepositoryPostgres) Get(id uuid.UUID) (Project, error) {
 		return Project{}, err
 	}
 
-	p.logger.Info("retrieved project from database", slog.Any("project", projectDB))
-
 	return ProjectDBToProjectModel(projectDB)
 }
 
@@ -89,16 +91,7 @@ func (p *ProjectRepositoryPostgres) GetByName(name string) (Project, error) {
 		return Project{}, err
 	}
 
-	project, err := ProjectDBToProjectModel(projectDB)
-	p.logger.Info("retrieved project from the database",
-		slog.Group("project",
-			slog.String("id", project.ID.String()),
-			slog.String("name", projectDB.Name),
-			slog.Time("created_at", projectDB.CreatedAt.Time),
-		),
-	)
-
-	return project, err
+	return ProjectDBToProjectModel(projectDB)
 }
 
 func (prepo *ProjectRepositoryPostgres) ListProjects() ([]Project, error) {
@@ -123,16 +116,25 @@ func (prepo *ProjectRepositoryPostgres) ListProjects() ([]Project, error) {
 	return projects, nil
 }
 
-func (p *ProjectRepositoryPostgres) Rename(id uuid.UUID, newName string) error {
+func (p *ProjectRepositoryPostgres) Rename(id uuid.UUID, newName string) (Project, error) {
 	pgUUID, err := internal.ScanUUID(id)
 	if err != nil {
-		return err
+		return Project{}, err
 	}
 
-	return p.Queries.RenameProject(p.ctx, db.RenameProjectParams{
+	projectDB, err := p.Queries.RenameProject(p.ctx, db.RenameProjectParams{
 		ID:   pgUUID,
 		Name: newName,
 	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Project{}, internal.NewNotFoundError(fmt.Sprintf("project %s", id))
+		}
+
+		return Project{}, err
+	}
+
+	return ProjectDBToProjectModel(projectDB)
 }
 
 func (p *ProjectRepositoryPostgres) Delete(id uuid.UUID) (Project, error) {

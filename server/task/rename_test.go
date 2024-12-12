@@ -59,7 +59,7 @@ func (suite *RenameTaskTestSuite) TestSuccess() {
 	require.NoError(t, err)
 
 	newTaskName := "My new test task"
-	err = suite.taskService.RenameTask(task.ID, newTaskName)
+	task, err = suite.taskService.RenameTask(task.ID, newTaskName)
 	if assert.NoError(t, err) {
 		task, _ = suite.taskService.repository.Get(task.ID)
 		assert.Equal(t, newTaskName, task.Name)
@@ -70,10 +70,8 @@ func (suite *RenameTaskTestSuite) TestTaskDoesNotExist() {
 	t := suite.T()
 
 	taskID := uuid.New()
-	err := suite.taskService.RenameTask(taskID, "New task name")
-	if err == nil {
-		t.Fatal("expected renaming an inexistent task to fail, but it did not")
-	}
+	_, err := suite.taskService.RenameTask(taskID, "New task name")
+	assert.Error(t, err)
 }
 
 func TestRenameTask(t *testing.T) {

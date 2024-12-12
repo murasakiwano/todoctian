@@ -287,6 +287,26 @@ func (suite *TaskRepoPostgresTestSuite) TestGetTasksByStatus() {
 	}
 }
 
+func (suite *TaskRepoPostgresTestSuite) TestListTasks() {
+	t := suite.T()
+
+	firstTask := NewTask("test task", suite.projectID, nil)
+	secondTask := NewTask("second test task", suite.otherProjectID, nil)
+	firstSubtask := NewTask("first subtask", suite.projectID, nil)
+
+	err := suite.repository.Create(firstTask)
+	require.NoError(t, err)
+	err = suite.repository.Create(secondTask)
+	require.NoError(t, err)
+	err = suite.repository.Create(firstSubtask)
+	require.NoError(t, err)
+
+	tasks, err := suite.repository.List()
+	if assert.NoError(t, err) {
+		assert.Len(t, tasks, 3)
+	}
+}
+
 func (suite *TaskRepoPostgresTestSuite) TestRenameTask() {
 	t := suite.T()
 	task := NewTask("Test task", suite.projectID, nil)
@@ -294,10 +314,9 @@ func (suite *TaskRepoPostgresTestSuite) TestRenameTask() {
 	require.NoError(t, err)
 
 	newName := "New test task name"
-	err = suite.repository.Rename(task.ID, newName)
+	renamedTask, err := suite.repository.Rename(task.ID, newName)
 	require.NoError(t, err)
 
-	renamedTask, err := suite.repository.Get(task.ID)
 	if assert.NoError(t, err) {
 		assert.Equal(t, task.ID, renamedTask.ID)
 		assert.Equal(t, newName, renamedTask.Name)

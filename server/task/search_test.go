@@ -53,6 +53,26 @@ func (suite *SearchTaskTestSuite) SetupTest() {
 	suite.projectID = projectIDs[0]
 }
 
+func (suite *SearchTaskTestSuite) TestSearchTaskByProject() {
+	t := suite.T()
+
+	otherProject := project.NewProject("other project")
+	err := suite.taskService.projectDB.Create(otherProject)
+	require.NoError(t, err)
+
+	firstTask, err := suite.taskService.CreateTask("test task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	_, err = suite.taskService.CreateTask("second task", otherProject.ID, nil)
+	require.NoError(t, err)
+
+	tasks, err := suite.taskService.SearchTaskByProject(suite.projectID)
+	if assert.NoError(t, err) {
+		assert.Len(t, tasks, 1)
+		assert.Equal(t, firstTask.Name, tasks[0].Name)
+	}
+}
+
 func (suite *SearchTaskTestSuite) TestAcrossAllProjects() {
 	t := suite.T()
 

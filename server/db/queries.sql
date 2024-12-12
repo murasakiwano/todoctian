@@ -17,10 +17,11 @@ WHERE name = $1 LIMIT 1;
 SELECT * FROM projects
 ORDER BY name;
 
--- name: RenameProject :exec
+-- name: RenameProject :one
 UPDATE projects
 SET name = $2
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;
 
 -- name: DeleteProject :one
 DELETE FROM projects
@@ -33,6 +34,10 @@ INSERT INTO tasks (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7
 );
+
+-- name: ListTasks :many
+SELECT * FROM tasks
+ORDER BY project_id;
 
 -- name: GetTask :one
 SELECT * FROM tasks
@@ -68,10 +73,11 @@ WHERE project_id = $1 AND parent_task_id IS NULL;
 SELECT * FROM tasks
 WHERE project_id = $1 AND status = $2;
 
--- name: RenameTask :exec
+-- name: RenameTask :one
 UPDATE tasks
 SET name = $2
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;
 
 -- name: UpdateTaskOrder :exec
 UPDATE tasks

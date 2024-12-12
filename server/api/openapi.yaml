@@ -25,7 +25,11 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Project"
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the project.
       responses:
         "201":
           description: Project created successfully.
@@ -33,6 +37,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Project"
+        "409":
+          description: Project name is already taken.
 
   /projects/{projectID}:
     get:
@@ -99,6 +105,10 @@ paths:
       responses:
         "204":
           description: Project deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
         "404":
           description: Project not found.
 
@@ -159,7 +169,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Task"
+                $ref: "#/components/schemas/Project"
 
   /tasks/{taskID}:
     get:
@@ -173,6 +183,11 @@ paths:
             type: string
             format: uuid
           description: The ID of the task.
+        - name: withSubtasks
+          in: query
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: A single task.
@@ -195,6 +210,10 @@ paths:
       responses:
         "204":
           description: Task deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
         "404":
           description: Task not found.
 
@@ -261,16 +280,14 @@ components:
           type: string
           format: uuid
           description: ID of the parent task, if it exists.
-        subtaskIDs:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: A list of the IDs for the task's subtasks.
         createdAt:
           type: string
           format: date-time
           description: The creation date of the task.
+        subtasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
 
     TaskStatus:
       type: string

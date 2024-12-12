@@ -19,7 +19,7 @@ func (ts *TaskService) DeleteTask(id uuid.UUID) (Task, error) {
 		}
 
 		ts.logger.Warn("task does not exist, nothing to do", slog.String("taskID", id.String()))
-		return Task{}, nil
+		return Task{}, internal.NewNotFoundError(fmt.Sprintf("task %s", id))
 	}
 
 	err = ts.maybeDeleteSubtasks(task)

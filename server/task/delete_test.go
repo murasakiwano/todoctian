@@ -74,7 +74,7 @@ func (suite *DeleteTaskTestSuite) TestTaskDoesNotExist() {
 
 	id := uuid.New()
 	_, err := suite.taskService.DeleteTask(id)
-	assert.NoError(t, err, "deleting a nonexistent task should be a no-op")
+	assert.Error(t, err)
 }
 
 func (suite *DeleteTaskTestSuite) TestAlsoDeletesSubtasks() {

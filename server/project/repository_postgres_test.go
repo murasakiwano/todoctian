@@ -128,9 +128,8 @@ func (suite *ProjectRepoPostgresTestSuite) TestRenameProject() {
 	assert.NoError(t, suite.repository.Create(project))
 
 	newName := "legit project"
-	assert.NoError(t, suite.repository.Rename(project.ID, newName))
+	project, err := suite.repository.Rename(project.ID, newName)
 
-	project, err := suite.repository.Get(project.ID)
 	if assert.NoError(t, err) {
 		assert.Equal(t, project.Name, newName)
 	}

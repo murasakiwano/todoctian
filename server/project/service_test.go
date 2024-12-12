@@ -92,9 +92,9 @@ func (suite *ProjectServiceTestSuite) TestRenameProject_SuccessfulRename() {
 	newName := "New test project name"
 
 	project, _ := suite.service.CreateProject(oldName)
-	err := suite.service.RenameProject(project.ID, newName)
-	if err != nil {
-		t.Fatalf("expected rename to succeed, but got error: %v", err)
+	project, err := suite.service.RenameProject(project.ID, newName)
+	if assert.NoError(t, err) {
+		assert.Equal(t, newName, project.Name)
 	}
 }
 
@@ -104,8 +104,10 @@ func (suite *ProjectServiceTestSuite) TestRenameProject_ReuseOldNameAfterRename(
 	newName := "New test project name"
 
 	project, _ := suite.service.CreateProject(oldName)
-	err := suite.service.RenameProject(project.ID, newName)
-	assert.NoError(t, err)
+	project, err := suite.service.RenameProject(project.ID, newName)
+	if assert.NoError(t, err) {
+		assert.Equal(t, newName, project.Name)
+	}
 
 	// Should allow creating a new project with the old name
 	_, err = suite.service.CreateProject(oldName)
@@ -120,10 +122,8 @@ func (suite *ProjectServiceTestSuite) TestRenameProject_FailOnDuplicateName() {
 	project2, _ := suite.service.CreateProject("Another project")
 
 	// Renaming project2 to the same name as project1 should fail
-	err := suite.service.RenameProject(project2.ID, name)
-	if err == nil {
-		t.Fatal("expected renaming to a duplicate name to fail, but it succeeded")
-	}
+	_, err := suite.service.RenameProject(project2.ID, name)
+	assert.Error(t, err)
 }
 
 func (suite *ProjectServiceTestSuite) TestRenameProject_NoOpForSameName() {
@@ -133,8 +133,10 @@ func (suite *ProjectServiceTestSuite) TestRenameProject_NoOpForSameName() {
 	project, _ := suite.service.CreateProject(name)
 
 	// Renaming to the same name should succeed and be a NOOP
-	err := suite.service.RenameProject(project.ID, name)
-	assert.NoError(t, err)
+	project, err := suite.service.RenameProject(project.ID, name)
+	if assert.NoError(t, err) {
+		assert.Equal(t, name, project.Name)
+	}
 }
 
 func (suite *ProjectServiceTestSuite) TestListProjects() {

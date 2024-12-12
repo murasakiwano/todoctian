@@ -21,6 +21,8 @@ type Task struct {
 	Name string
 	// Task status (whether it's completed or not)
 	Status TaskStatus
+	// Subtasks of the this task. It is not necessarily present
+	Subtasks []Task
 	// The ID of the Project this task belongs to
 	ProjectID uuid.UUID
 	// A unique identifier for the task
@@ -54,6 +56,7 @@ func NewTask(name string, projectID uuid.UUID, parentTaskID *uuid.UUID) Task {
 		ParentTaskID: parentTaskID,
 		Order:        0, // 0 means the order is unset
 		CreatedAt:    now,
+		Subtasks:     []Task{},
 	}
 
 	return task
@@ -63,15 +66,31 @@ func (t Task) IsInProjectRoot() bool {
 	return t.ParentTaskID == nil
 }
 
-type TaskStatus int
-
-func (t TaskStatus) String() string {
-	return [...]string{"pending", "completed"}[t]
+type TaskStatus struct {
+	value string
 }
 
-const (
-	TaskStatusPending TaskStatus = iota
-	TaskStatusCompleted
+func (t TaskStatus) String() string {
+	return t.value
+}
+
+func (t *TaskStatus) FromString(value string) error {
+	switch value {
+	case TaskStatusCompleted.value:
+		t.value = value
+		return nil
+
+	case TaskStatusPending.value:
+		t.value = value
+		return nil
+	}
+
+	return fmt.Errorf("unknown enum value: %v", value)
+}
+
+var (
+	TaskStatusCompleted = TaskStatus{value: "completed"}
+	TaskStatusPending   = TaskStatus{value: "pending"}
 )
 
 func (t Task) LogValue() slog.Value {

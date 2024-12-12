@@ -42,6 +42,10 @@ func (p *ProjectService) CreateProject(name string) (Project, error) {
 	return project, err
 }
 
+func (p *ProjectService) GetProject(id uuid.UUID) (Project, error) {
+	return p.repository.Get(id)
+}
+
 func (p *ProjectService) DeleteProject(id uuid.UUID) (Project, error) {
 	_, err := p.repository.Get(id)
 	if err != nil {
@@ -52,14 +56,14 @@ func (p *ProjectService) DeleteProject(id uuid.UUID) (Project, error) {
 	return p.repository.Delete(id)
 }
 
-func (p *ProjectService) RenameProject(id uuid.UUID, newName string) error {
+func (p *ProjectService) RenameProject(id uuid.UUID, newName string) (Project, error) {
 	project, err := p.repository.Get(id)
 	if err != nil {
 		p.logger.Error("failed to rename project", slog.String("err", err.Error()))
-		return err
+		return Project{}, err
 	}
 	if project.Name == newName {
-		return nil
+		return project, nil
 	}
 
 	// Check if another project with the new name already exists
@@ -69,10 +73,10 @@ func (p *ProjectService) RenameProject(id uuid.UUID, newName string) error {
 			"could not rename project - project with requested name already exists",
 			slog.String("name", newName),
 		)
-		return internal.NewAlreadyExistsError(fmt.Sprintf("Project with name \"%s\"", newName))
+		return Project{}, internal.NewAlreadyExistsError(fmt.Sprintf("Project with name \"%s\"", newName))
 	}
 	if !errors.Is(err, internal.ErrNotFound) {
-		return err
+		return Project{}, err
 	}
 
 	return p.repository.Rename(project.ID, newName)

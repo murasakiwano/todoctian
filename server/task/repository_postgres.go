@@ -90,8 +90,6 @@ func (t *TaskRepositoryPostgres) Get(id uuid.UUID) (Task, error) {
 		return Task{}, err
 	}
 
-	t.logger.Debug("retrieved task from database", slog.Any("Task", task))
-
 	return task, nil
 }
 
@@ -157,6 +155,14 @@ func (t *TaskRepositoryPostgres) GetSubtasksDeep(id uuid.UUID) (_ []Task, _ erro
 func (t *TaskRepositoryPostgres) GetTasksByProject(projectID uuid.UUID) (_ []Task, _ error) {
 	pgUUID, err := internal.ScanUUID(projectID)
 	if err != nil {
+		return nil, err
+	}
+
+	_, err = t.Queries.GetProject(t.ctx, pgUUID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, internal.NewNotFoundError(fmt.Sprintf("Project %s", projectID))
+		}
 		return nil, err
 	}
 
@@ -230,14 +236,42 @@ func (t *TaskRepositoryPostgres) GetTasksByStatus(projectID uuid.UUID, status Ta
 	return tasks, nil
 }
 
-// Rename a single task
-func (t *TaskRepositoryPostgres) Rename(taskID uuid.UUID, newName string) (_ error) {
-	pgUUID, err := internal.ScanUUID(taskID)
+// List all tasks in the database
+func (t *TaskRepositoryPostgres) List() ([]Task, error) {
+	tasksDB, err := t.Queries.ListTasks(t.ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return t.Queries.RenameTask(t.ctx, db.RenameTaskParams{ID: pgUUID, Name: newName})
+	tasks := []Task{}
+	for _, tDB := range tasksDB {
+		task, err := TaskDBToTaskModel(tDB)
+		if err != nil {
+			return nil, err
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}
+
+// Rename a single task
+func (t *TaskRepositoryPostgres) Rename(taskID uuid.UUID, newName string) (_ Task, _ error) {
+	pgUUID, err := internal.ScanUUID(taskID)
+	if err != nil {
+		return Task{}, err
+	}
+
+	taskDB, err := t.Queries.RenameTask(t.ctx, db.RenameTaskParams{ID: pgUUID, Name: newName})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Task{}, internal.NewNotFoundError(fmt.Sprintf("task %s", taskID))
+		}
+		return Task{}, err
+	}
+
+	return TaskDBToTaskModel(taskDB)
 }
 
 // Update a single task's order

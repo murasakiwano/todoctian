@@ -343,6 +343,39 @@ func (q *Queries) ListProjects(ctx context.Context) ([]Project, error) {
 	return items, nil
 }
 
+const listTasks = `-- name: ListTasks :many
+SELECT id, created_at, parent_task_id, project_id, status, "order", name FROM tasks
+ORDER BY project_id
+`
+
+func (q *Queries) ListTasks(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.Query(ctx, listTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.ParentTaskID,
+			&i.ProjectID,
+			&i.Status,
+			&i.Order,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const offsetTaskOrders = `-- name: OffsetTaskOrders :exec
 
 UPDATE tasks
@@ -366,10 +399,11 @@ func (q *Queries) OffsetTaskOrders(ctx context.Context, arg OffsetTaskOrdersPara
 	return err
 }
 
-const renameProject = `-- name: RenameProject :exec
+const renameProject = `-- name: RenameProject :one
 UPDATE projects
 SET name = $2
 WHERE id = $1
+RETURNING id, created_at, name
 `
 
 type RenameProjectParams struct {
@@ -377,15 +411,18 @@ type RenameProjectParams struct {
 	Name string
 }
 
-func (q *Queries) RenameProject(ctx context.Context, arg RenameProjectParams) error {
-	_, err := q.db.Exec(ctx, renameProject, arg.ID, arg.Name)
-	return err
+func (q *Queries) RenameProject(ctx context.Context, arg RenameProjectParams) (Project, error) {
+	row := q.db.QueryRow(ctx, renameProject, arg.ID, arg.Name)
+	var i Project
+	err := row.Scan(&i.ID, &i.CreatedAt, &i.Name)
+	return i, err
 }
 
-const renameTask = `-- name: RenameTask :exec
+const renameTask = `-- name: RenameTask :one
 UPDATE tasks
 SET name = $2
 WHERE id = $1
+RETURNING id, created_at, parent_task_id, project_id, status, "order", name
 `
 
 type RenameTaskParams struct {
@@ -393,9 +430,19 @@ type RenameTaskParams struct {
 	Name string
 }
 
-func (q *Queries) RenameTask(ctx context.Context, arg RenameTaskParams) error {
-	_, err := q.db.Exec(ctx, renameTask, arg.ID, arg.Name)
-	return err
+func (q *Queries) RenameTask(ctx context.Context, arg RenameTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, renameTask, arg.ID, arg.Name)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.ParentTaskID,
+		&i.ProjectID,
+		&i.Status,
+		&i.Order,
+		&i.Name,
+	)
+	return i, err
 }
 
 const updateTaskOrder = `-- name: UpdateTaskOrder :exec

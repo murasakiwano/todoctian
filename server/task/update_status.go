@@ -1,27 +1,40 @@
 package task
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 )
 
-// MarkTaskAsPending either does nothing (if the task is already marked "Todo") or updates the
-// task status to "Todo". When a subtask is marked as pending, its parent must also be marked as
-// pending, since it does not make sense to have a collection of tasks be marked as completed
-// when not all steps have been done.
-func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
+func (ts *TaskService) UpdateTaskStatus(id uuid.UUID, status string) error {
 	task, err := ts.repository.Get(id)
 	if err != nil {
 		return err
 	}
 
+	switch status {
+	case TaskStatusPending.value:
+		return ts.markTaskAsPending(task)
+
+	case TaskStatusCompleted.value:
+		return ts.markTaskAsCompleted(task)
+	}
+
+	return fmt.Errorf("invalid task status: %s", status)
+}
+
+// markTaskAsPending either does nothing (if the task is already marked "Todo") or updates the
+// task status to "Todo". When a subtask is marked as pending, its parent must also be marked as
+// pending, since it does not make sense to have a collection of tasks be marked as completed
+// when not all steps have been done.
+func (ts *TaskService) markTaskAsPending(task Task) error {
 	if task.Status == TaskStatusPending {
 		return nil
 	}
 
 	task.Status = TaskStatusPending
-	err = ts.repository.UpdateTaskStatus(task.ID, TaskStatusPending)
+	err := ts.repository.UpdateTaskStatus(task.ID, TaskStatusPending)
 	if err != nil {
 		return err
 	}
@@ -39,19 +52,14 @@ func (ts *TaskService) MarkTaskAsPending(id uuid.UUID) error {
 		return nil
 	}
 
-	return ts.MarkTaskAsPending(parentTask.ID)
+	return ts.markTaskAsPending(parentTask)
 }
 
-// CompleteTask sets a task as completed. When a task is completed, all its subtasks must also be
+// completeTask sets a task as completed. When a task is completed, all its subtasks must also be
 // completed. Here we do a tree traversal downwards and then upwards. We stop the traversal whenever
 // we find an already completed task, since it means that the work has already been done for it.
-func (ts *TaskService) CompleteTask(id uuid.UUID) error {
-	task, err := ts.repository.Get(id)
-	if err != nil {
-		return err
-	}
-
-	err = ts.markTaskAsCompleted(task)
+func (ts *TaskService) markTaskAsCompleted(task Task) error {
+	err := ts.completeTask(task)
 	if err != nil {
 		return err
 	}
@@ -71,14 +79,12 @@ func (ts *TaskService) CompleteTask(id uuid.UUID) error {
 	return nil
 }
 
-func (ts *TaskService) markTaskAsCompleted(task Task) error {
-	task.Status = TaskStatusCompleted
+func (ts *TaskService) completeTask(task Task) error {
 	ts.logger.Debug("marked task as completed", slog.String("taskID", task.ID.String()))
 	err := ts.repository.UpdateTaskStatus(task.ID, TaskStatusCompleted)
 	if err != nil {
 		return err
 	}
-	ts.logger.Debug("Successfully updated task", slog.Any("task", task))
 
 	return nil
 }
@@ -94,7 +100,7 @@ func (ts *TaskService) completeSubtasks(task Task) error {
 
 	ts.logger.Debug("task has subtasks, completing them...", slog.String("taskID", task.ID.String()))
 	for _, subtask := range subtasks {
-		err := ts.CompleteTask(subtask.ID)
+		err := ts.completeTask(subtask)
 		if err != nil {
 			ts.logger.Error(
 				"Failed to complete task",
@@ -135,7 +141,7 @@ func (ts *TaskService) completeParentTask(task Task) error {
 
 	ts.logger.Debug("found task siblings", slog.Any("siblings", siblings))
 	if ts.allSiblingsCompleted(siblings) && parentTask.Status != TaskStatusCompleted {
-		err := ts.CompleteTask(parentTask.ID)
+		err := ts.completeTask(parentTask)
 		if err != nil {
 			return err
 		}

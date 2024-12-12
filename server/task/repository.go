@@ -26,8 +26,11 @@ type TaskRepository interface {
 	// Filter tasks in a project by their status
 	GetTasksByStatus(projectID uuid.UUID, status TaskStatus) ([]Task, error)
 
+	// List all tasks in the repository
+	List() ([]Task, error)
+
 	// Rename a single task
-	Rename(taskID uuid.UUID, newName string) error
+	Rename(taskID uuid.UUID, newName string) (Task, error)
 
 	// Update a single task's order
 	UpdateOrder(taskID uuid.UUID, newTaskOrder int) error

@@ -9,6 +9,10 @@ import (
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
+func (ts *TaskService) SearchTaskByProject(projectID uuid.UUID) ([]Task, error) {
+	return ts.repository.GetTasksByProject(projectID)
+}
+
 func (ts *TaskService) SearchTaskName(partial string, projectID uuid.UUID) ([]Task, error) {
 	tasks, err := ts.repository.GetTasksByProject(projectID)
 	if err != nil {
