@@ -1,6 +1,7 @@
 package task
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -34,9 +35,13 @@ func (ts TaskService) ValidateTask(task Task) error {
 	}
 	// Check if the task parent is valid
 	if task.ParentTaskID != nil {
-		_, err = ts.repository.Get(*task.ParentTaskID)
+		parentTask, err := ts.repository.Get(*task.ParentTaskID)
 		if err != nil {
 			return err
+		}
+
+		if parentTask.ProjectID != task.ProjectID {
+			return errors.New("task and parent task must belong to the same project")
 		}
 	}
 

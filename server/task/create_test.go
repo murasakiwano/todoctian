@@ -143,6 +143,19 @@ func (suite *CreateTaskTestSuite) TestSubtaskDoesNotAffectParentTaskOrder() {
 	)
 }
 
+func (suite *CreateTaskTestSuite) TestDoesNotAllowParentTaskFromAnotherProject() {
+	t := suite.T()
+
+	parentTask, err := suite.taskService.CreateTask("Parent task", suite.projectID, nil)
+	require.NoError(t, err)
+
+	otherProject := project.NewProject("Other project")
+	err = suite.taskService.projectDB.Create(otherProject)
+	require.NoError(t, err)
+	_, err = suite.taskService.CreateTask("Subtask", otherProject.ID, &parentTask.ID)
+	require.Error(t, err)
+}
+
 func TestCreateTask(t *testing.T) {
 	suite.Run(t, new(CreateTaskTestSuite))
 }
