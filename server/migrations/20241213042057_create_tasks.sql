@@ -1,20 +1,3 @@
--- Add new schema named "public"
-CREATE SCHEMA IF NOT EXISTS "public";
-
--- Set comment to schema: "public"
-COMMENT ON SCHEMA "public" IS 'standard public schema';
-
--- Create "projects" table
-CREATE TABLE "public"."projects" (
-  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
-  "created_at" timestamp NOT NULL DEFAULT now(),
-  "name" text NOT NULL UNIQUE,
-  PRIMARY KEY ("id")
-);
-
--- Create index "project_name" to table: "projects"
-CREATE INDEX "project_name" ON "public"."projects" ("name");
-
 -- Create "tasks" table
 CREATE TABLE "public"."tasks" (
   "id" uuid NOT NULL DEFAULT gen_random_uuid(),

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -13,5 +14,6 @@ func main() {
 	r := chi.NewRouter()
 	r.Mount("/", todoctian.Handler(pgConnString))
 
+	fmt.Println("Server now listening at port 5656")
 	http.ListenAndServe(":5656", r)
 }
